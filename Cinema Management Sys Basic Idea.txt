@@ -1,0 +1,29 @@
+CinemaManagement Sys
+
+4 - Tier
+
+Producers - Direct Tie Up , Movies on Lisence 
+
+Application Owner - Cinema Owner Management(Single,Multiple) , Movie Add 
+
+Cinema Owner - Cinema Management , Screen Management , Cinema Admin Management , MovieLeasing Management , View Bookings
+
+Cinema Admin - Show Management , Booking Management (Assigned Cinema) , 
+
+User - Search , Location , Shows , View Booking ,
+
+
+
+
+==Research on this First==
+-Payment Gateway !! 
+-Database Options!!
+
+
+==Tech Stack==
+- React 
+- Flask
+- Database (Firebase RealTime Database - Login With Google,FireStore , )
+- TailWind CSS
+- ShadCDN , MAGIC UI
+- Framer Motion
