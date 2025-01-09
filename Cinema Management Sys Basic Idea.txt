@@ -27,3 +27,6 @@ User - Search , Location , Shows , View Booking ,
 - TailWind CSS
 - ShadCDN , MAGIC UI
 - Framer Motion
+
+
+THis is the new edited file!!
