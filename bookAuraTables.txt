@@ -1,0 +1,125 @@
+=Platform Administrator
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| Field       | Type              | Null | Key | Default           | Extra                       |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| admin_id    | INT               | NO   | PRI | NULL              | AUTO_INCREMENT              |
+| username    | VARCHAR(50)       | NO   | UNI | NULL              |                             |
+| email       | VARCHAR(100)      | NO   | UNI | NULL              |                             |
+| password_hash | VARCHAR(255)    | NO   |     | NULL              |                             |
+| created_at  | TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP |                             |
+| updated_at  | TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+
+
+=Moderator
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| Field       | Type              | Null | Key | Default           | Extra                       |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| moderator_id| INT               | NO   | PRI | NULL              | AUTO_INCREMENT              |
+| username    | VARCHAR(50)       | NO   | UNI | NULL              |                             |
+| email       | VARCHAR(100)      | NO   | UNI | NULL              |                             |
+| password_hash | VARCHAR(255)    | NO   |     | NULL              |                             |
+| created_at  | TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP |                             |
+| updated_at  | TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+
+
+=Publisher
++--------------+-------------------+------+-----+-------------------+-----------------------------+
+| Field        | Type              | Null | Key | Default           | Extra                       |
++--------------+-------------------+------+-----+-------------------+-----------------------------+
+| publisher_id | INT               | NO   | PRI | NULL              | AUTO_INCREMENT              |
+| username     | VARCHAR(50)       | NO   | UNI | NULL              |                             |
+| email        | VARCHAR(100)      | NO   | UNI | NULL              |                             |
+| password_hash| VARCHAR(255)      | NO   |     | NULL              |                             |
+| created_at   | TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP |                             |
+| updated_at   | TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP |
++--------------+-------------------+------+-----+-------------------+-----------------------------+
+
+
+=Author
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| Field       | Type              | Null | Key | Default           | Extra                       |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| author_id   | INT               | NO   | PRI | NULL              | AUTO_INCREMENT              |
+| username    | VARCHAR(50)       | NO   | UNI | NULL              |                             |
+| email       | VARCHAR(100)      | NO   | UNI | NULL              |                             |
+| password_hash | VARCHAR(255)    | NO   |     | NULL              |                             |
+| bio         | TEXT              | YES  |     | NULL              |                             |
+| is_verified | BOOLEAN           | YES  |     | FALSE             |                             |
+| created_at  | TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP |                             |
+| updated_at  | TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+
+=User
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| Field       | Type              | Null | Key | Default           | Extra                       |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| user_id     | INT               | NO   | PRI | NULL              | AUTO_INCREMENT              |
+| username    | VARCHAR(50)       | NO   | UNI | NULL              |                             |
+| email       | VARCHAR(100)      | NO   | UNI | NULL              |                             |
+| password_hash | VARCHAR(255)    | NO   |     | NULL              |                             |
+| created_at  | TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP |                             |
+| updated_at  | TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+
+
+=Books
++------------+-------------------+------+-----+-------------------+-----------------------------+
+| Field      | Type              | Null | Key | Default           | Extra                       |
++------------+-------------------+------+-----+-------------------+-----------------------------+
+| book_id    | INT               | NO   | PRI | NULL              | AUTO_INCREMENT              |
+| author_id  | INT               | NO   | MUL | NULL              |                             |
+| title      | VARCHAR(255)      | NO   |     | NULL              |                             |
+| description| TEXT              | YES  |     | NULL              |                             |
+| content    | TEXT              | NO   |     | NULL              |                             |
+| is_public  | BOOLEAN           | YES  |     | FALSE             |                             |
+| is_approved| BOOLEAN           | YES  |     | FALSE             |                             |
+| uploaded_at| TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP |                             |
++------------+-------------------+------+-----+-------------------+-----------------------------+
+
+
+=Bookmarks
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| Field       | Type              | Null | Key | Default           | Extra                       |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| bookmark_id | INT               | NO   | PRI | NULL              | AUTO_INCREMENT              |
+| user_id     | INT               | NO   | MUL | NULL              |                             |
+| book_id     | INT               | NO   | MUL | NULL              |                             |
+| created_at  | TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP |                             |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+
+
+=Audio Requests
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| Field       | Type              | Null | Key | Default           | Extra                       |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| request_id  | INT               | NO   | PRI | NULL              | AUTO_INCREMENT              |
+| user_id     | INT               | NO   | MUL | NULL              |                             |
+| book_id     | INT               | NO   | MUL | NULL              |                             |
+| language    | ENUM('English', 'Hindi', 'Marathi') | NO | NULL  |                             |
+| requested_at| TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP |                             |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+
+
+=Reading History
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| Field       | Type              | Null | Key | Default           | Extra                       |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| history_id  | INT               | NO   | PRI | NULL              | AUTO_INCREMENT              |
+| user_id     | INT               | NO   | MUL | NULL              |                             |
+| book_id     | INT               | NO   | MUL | NULL              |                             |
+| last_read_at| TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP |                             |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+
+
+=Reports
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| Field       | Type              | Null | Key | Default           | Extra                       |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
+| report_id   | INT               | NO   | PRI | NULL              | AUTO_INCREMENT              |
+| user_id     | INT               | NO   | MUL | NULL              |                             |
+| book_id     | INT               | NO   | MUL | NULL              |                             |
+| reason      | TEXT              | NO   |     | NULL              |                             |
+| reported_at | TIMESTAMP         | YES  |     | CURRENT_TIMESTAMP |                             |
++-------------+-------------------+------+-----+-------------------+-----------------------------+
