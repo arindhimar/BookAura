@@ -1,0 +1,14 @@
+Frontend : HTML, CSS (with TailWind CSS), JavaScript , React 
+Application Database : MySQL , Firebase 
+BackEnd : Flask 
+Audio Processing : Text-to-speech APIs/Python Libs for audiobook generation (English, Hindi, Marathi) (amazon polly,google's text-to-speech,)
+
+
+
+
+Things to add : Celery 
+
+Storage Solutions 	: S3(5 gigs , but it is too less)
+			: Drive
+			: DropBox
+			: Local Nas Drives			
