@@ -1,24 +1,27 @@
-import { motion } from 'framer-motion'
-import { Heart, Facebook, Instagram, Twitter } from 'lucide-react'
+import { motion } from 'framer-motion';
+import { Book, Facebook, Instagram, Twitter, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function Footer() {
+  const { isDarkMode, toggleDarkMode } = useTheme();
+
   const footerSections = [
     {
       title: 'Company',
       links: ['About', 'Services', 'Careers', 'Team']
     },
     {
-      title: 'Designs',
-      links: ['Design systems', 'UI/UX Design', 'Free resources', 'Designer inspiration']
+      title: 'Resources',
+      links: ['Blog', 'Support', 'Terms of Service', 'Privacy Policy']
     },
     {
-      title: 'Resources',
-      links: ['Become a designer', 'Blog', 'Support without borders', 'Affiliates']
+      title: 'Contact',
+      links: ['Contact Us', 'FAQ', 'Feedback']
     }
-  ]
+  ];
 
   return (
-    <footer className="bg-gray-50 dark:bg-gray-900 pt-20 pb-8">
+    <footer className="bg-white dark:bg-gray-900 pt-20 pb-8">
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           <div>
@@ -28,13 +31,13 @@ export default function Footer() {
               viewport={{ once: true }}
               className="flex items-center space-x-2 mb-6"
             >
-              <Heart className="h-8 w-8 text-[#FF5722]" />
-              <span className="text-2xl font-bold bg-gradient-to-r from-[#FF5722] to-[#F4511E] text-transparent bg-clip-text">
-                BrandBuzz
+              <Book className="h-8 w-8 text-blue-500" />
+              <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                BookAura
               </span>
             </motion.div>
-            <p className="text-gray-900 dark:text-white mb-6">
-              Empowering businesses with innovative digital marketing solutions.
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Empowering readers with a world of digital books at their fingertips.
             </p>
             <div className="flex space-x-4">
               {[Facebook, Instagram, Twitter].map((Icon, index) => (
@@ -42,7 +45,7 @@ export default function Footer() {
                   key={index}
                   href="#"
                   whileHover={{ y: -3 }}
-                  className="bg-white dark:bg-gray-800 p-2 rounded-full text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                  className="bg-gray-100 dark:bg-gray-800 p-2 rounded-full text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
                 >
                   <Icon className="w-5 h-5" />
                 </motion.a>
@@ -58,11 +61,11 @@ export default function Footer() {
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
             >
-              <h3 className="font-bold mb-6">{section.title}</h3>
+              <h3 className="font-bold mb-6 text-gray-900 dark:text-white">{section.title}</h3>
               <ul className="space-y-4">
                 {section.links.map((link) => (
                   <motion.li key={link} whileHover={{ x: 3 }}>
-                    <a href="#" className="text-gray-600 dark:text-gray-300 hover:text-[#FF5722] transition-colors">
+                    <a href="#" className="text-gray-600 dark:text-gray-300 hover:text-blue-500 transition-colors">
                       {link}
                     </a>
                   </motion.li>
@@ -76,14 +79,20 @@ export default function Footer() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="border-t border-gray-200 pt-8"
+          className="border-t border-gray-200 dark:border-gray-700 pt-8 flex justify-between items-center"
         >
-          <p className="text-center text-gray-600 dark:text-gray-300">
-            © {new Date().getFullYear()} BrandBuzz. All rights reserved.
+          <p className="text-gray-600 dark:text-gray-300">
+            © {new Date().getFullYear()} BookAura. All rights reserved.
           </p>
+          <button
+            onClick={toggleDarkMode}
+            className="p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          >
+            {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
         </motion.div>
       </div>
     </footer>
-  )
+  );
 }
 

@@ -1,14 +1,13 @@
-import { motion } from 'framer-motion'
-import { ArrowRight, BookOpen } from 'lucide-react'
-import GradientButton from './ui/GradientButton'
+import { motion } from 'framer-motion';
+import { ArrowRight, BookOpen } from 'lucide-react';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5 }
-}
+};
 
-export default function Hero() {
+export default function Hero({ openLogin, openRegister }) {
   return (
     <section className="pt-32 pb-16 bg-gray-50 dark:bg-gray-900 overflow-hidden">
       <div className="container mx-auto px-4">
@@ -20,10 +19,10 @@ export default function Hero() {
             className="relative z-10"
           >
             <motion.div 
-              className="inline-block bg-blue-100 rounded-lg px-4 py-2 mb-6"
+              className="inline-block bg-blue-100 dark:bg-blue-900 rounded-lg px-4 py-2 mb-6"
               {...fadeInUp}
             >
-              <span className="text-blue-600 font-semibold">
+              <span className="text-blue-600 dark:text-blue-400 font-semibold">
                 Discover Your Next Favorite Book
               </span>
             </motion.div>
@@ -36,7 +35,7 @@ export default function Hero() {
               <span className="text-blue-500">
                 Knowledge
               </span>{' '}
-              with EBookHub
+              with BookAura
             </motion.h1>
             
             <motion.p 
@@ -50,17 +49,19 @@ export default function Hero() {
               className="flex flex-wrap gap-4"
               {...fadeInUp}
             >
-              <GradientButton>
-                Start Reading <ArrowRight className="ml-2 h-5 w-5" />
-              </GradientButton>
-              
-              <motion.button
-                whileHover={{ x: 5 }}
-                className="text-gray-600 dark:text-gray-300 flex items-center space-x-2 group px-4"
+              <button
+                onClick={openRegister}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full transition-colors duration-300"
               >
-                <span>Browse Categories</span>
-                <ArrowRight className="w-5 h-5 transform transition-transform group-hover:translate-x-1" />
-              </motion.button>
+                Get Started
+              </button>
+              
+              <button
+                onClick={openLogin}
+                className="text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 font-bold py-3 px-8 rounded-full border border-gray-300 dark:border-gray-700 transition-colors duration-300"
+              >
+                Login
+              </button>
             </motion.div>
           </motion.div>
           
@@ -95,6 +96,6 @@ export default function Hero() {
         </div>
       </div>
     </section>
-  )
+  );
 }
 

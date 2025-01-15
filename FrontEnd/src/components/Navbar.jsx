@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Book, Menu, X, Sun, Moon } from 'lucide-react'
+import { useTheme } from '../contexts/ThemeContext';
+
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const { isDarkMode, toggleDarkMode } = useTheme();
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -16,17 +19,7 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [isDarkMode])
 
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode)
-  }
 
   return (
     <motion.nav 
@@ -46,11 +39,11 @@ export default function Navbar() {
               <Book className="h-8 w-8 text-blue-500" />
             </motion.div>
             <span className="text-2xl font-bold text-gray-800 dark:text-white">
-              EBookHub
+              BookAura
             </span>
           </Link>
           
-          <div className="hidden md:flex items-center space-x-8">
+          {/* <div className="hidden md:flex items-center space-x-8">
             {['Home', 'Books', 'How It Works', 'Pricing', 'Contact'].map((item) => (
               <motion.div
                 key={item}
@@ -65,7 +58,7 @@ export default function Navbar() {
                 </Link>
               </motion.div>
             ))}
-          </div>
+          </div> */}
 
           <div className="hidden md:flex items-center space-x-4">
             <button

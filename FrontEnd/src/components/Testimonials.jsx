@@ -7,7 +7,7 @@ const testimonials = [
     id: 1,
     name: "Sarah Johnson",
     company: "TechCorp Inc.",
-    text: "Working with BrandBuzz has been transformative for our business. Their strategic approach and attention to detail are unmatched.",
+    text: "BookAura has transformed my reading experience. Their vast collection and user-friendly interface are unmatched.",
     rating: 5,
     image: "/placeholder.svg?height=100&width=100"
   },
@@ -15,7 +15,7 @@ const testimonials = [
     id: 2,
     name: "Michael Chen",
     company: "StartUp Labs",
-    text: "The team's creativity and technical expertise helped us achieve our marketing goals faster than expected.",
+    text: "The convenience of having my entire library at my fingertips is incredible. BookAura has made reading on-the-go a breeze.",
     rating: 5,
     image: "/placeholder.svg?height=100&width=100"
   },
@@ -23,7 +23,7 @@ const testimonials = [
     id: 3,
     name: "Emma Davis",
     company: "Growth Solutions",
-    text: "Exceptional service and remarkable results. They truly understand digital marketing.",
+    text: "I've discovered so many new authors and genres thanks to BookAura. It's expanded my literary horizons.",
     rating: 5,
     image: "/placeholder.svg?height=100&width=100"
   }
@@ -50,14 +50,14 @@ export default function Testimonials() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-            What{' '}
-            <span className="bg-gradient-to-r from-[#FF5722] to-[#F4511E] text-transparent bg-clip-text">
-              Clients
+            What Our{' '}
+            <span className="text-blue-500">
+              Readers
             </span>{' '}
-            Say!
+            Say
           </h2>
           <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            See How Our Digital Marketing Agency Helped Create Achieve Their Goals
+            Discover how BookAura has enhanced the reading experience for our community
           </p>
         </motion.div>
 
@@ -68,9 +68,10 @@ export default function Testimonials() {
               initial={{ opacity: 0, x: 100 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -100 }}
+              transition={{ duration: 0.3 }}
               className="bg-white dark:bg-gray-700 p-8 md:p-12 rounded-2xl shadow-lg"
             >
-              <Quote className="text-[#FF5722] w-12 h-12 mb-6 opacity-20" />
+              <Quote className="text-blue-500 w-12 h-12 mb-6 opacity-20" />
               <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
                 <div className="relative w-20 h-20 rounded-full overflow-hidden flex-shrink-0">
                   <img
@@ -93,23 +94,19 @@ export default function Testimonials() {
             </motion.div>
           </AnimatePresence>
 
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+          <button
             onClick={prev}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 bg-white dark:bg-gray-700 p-3 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-[#FF5722]"
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 md:-translate-x-12 bg-white dark:bg-gray-700 p-3 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-blue-500 transition-all duration-300 z-10"
           >
             <ChevronLeft className="w-6 h-6" />
-          </motion.button>
+          </button>
           
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+          <button
             onClick={next}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 bg-white dark:bg-gray-700 p-3 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-[#FF5722]"
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 md:translate-x-12 bg-white dark:bg-gray-700 p-3 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-blue-500 transition-all duration-300 z-10"
           >
             <ChevronRight className="w-6 h-6" />
-          </motion.button>
+          </button>
         </div>
       </div>
     </section>

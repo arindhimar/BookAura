@@ -73,24 +73,24 @@ function FAQItem({ question, answer }) {
         <span className="text-lg font-semibold text-gray-900 dark:text-white">{question}</span>
         <ChevronDown className={`w-5 h-5 text-blue-500 transform transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="bg-white dark:bg-gray-700 px-4 pb-4 rounded-b-lg shadow-md overflow-hidden"
+            transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+            className="bg-white dark:bg-gray-700 overflow-hidden"
           >
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2, delay: 0.1 }}
-              className="text-gray-600 dark:text-gray-300 mt-2"
+              className="p-4"
             >
-              {answer}
-            </motion.p>
+              <p className="text-gray-600 dark:text-gray-300">{answer}</p>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
