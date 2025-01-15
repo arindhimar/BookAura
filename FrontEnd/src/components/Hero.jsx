@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, BookOpen } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -23,7 +23,7 @@ export default function Hero({ openLogin, openRegister }) {
               {...fadeInUp}
             >
               <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                Discover Your Next Favorite Book
+                Books Reimagined. Voices That Inspire
               </span>
             </motion.div>
             
@@ -31,18 +31,14 @@ export default function Hero({ openLogin, openRegister }) {
               className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-gray-900 dark:text-white"
               {...fadeInUp}
             >
-              Unlock a World of{' '}
-              <span className="text-blue-500">
-                Knowledge
-              </span>{' '}
-              with BookAura
+              Transforming pages into voices, anytime, anywhere
             </motion.h1>
             
             <motion.p 
               className="text-gray-600 dark:text-gray-300 text-lg mb-8 max-w-lg"
               {...fadeInUp}
             >
-              Dive into a vast library of eBooks across all genres. Read, learn, and grow with our curated collection of digital books.
+              Empowering minds through limitless media – eBooks, audiobooks, real-time dictionary, and more! Contribute, track progress, and explore a world of knowledge in 3 languages, all AI-powered and designed for readers and listeners alike.
             </motion.p>
             
             <motion.div 
@@ -72,25 +68,22 @@ export default function Hero({ openLogin, openRegister }) {
             className="relative h-[500px] md:h-[600px]"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-full blur-3xl opacity-30" />
-            <img
-              src="/placeholder.svg?height=600&width=600"
-              alt="EBook reader illustration"
-              className="w-full h-full object-contain z-10"
-            />
-            
             <motion.div
+              className="relative z-10 w-full h-full"
               animate={{
-                y: [0, -20, 0],
+                y: [0, -10, 0],
               }}
               transition={{
                 duration: 4,
                 repeat: Infinity,
                 repeatType: "reverse",
               }}
-              className="absolute inset-0 z-20"
             >
-              <BookOpen className="absolute top-1/4 left-1/4 text-blue-500 w-16 h-16 opacity-50" />
-              <BookOpen className="absolute bottom-1/4 right-1/4 text-purple-500 w-16 h-16 opacity-50" />
+              <img
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/pixelcut-export-PwqpHg7rPTtChXgC30YJx6UGGW7jEk.png"
+                alt="BookAura illustration showing headphones with books and people reading"
+                className="w-full h-full object-contain"
+              />
             </motion.div>
           </motion.div>
         </div>

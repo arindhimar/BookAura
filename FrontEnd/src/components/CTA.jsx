@@ -12,7 +12,7 @@ export default function CTA() {
           className="text-center"
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white dark:text-gray-100">
-            Ready to Start Your Reading Journey?
+            Read it. Hear it. Experience it. Your next great story is just a click away.
           </h2>
           <p className="text-blue-100 dark:text-blue-200 max-w-2xl mx-auto mb-8">
             Join thousands of readers who have already discovered the joy of digital reading with BookAura. Sign up now and get access to our vast library of eBooks!

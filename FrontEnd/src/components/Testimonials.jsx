@@ -30,15 +30,35 @@ const testimonials = [
 ]
 
 export default function Testimonials() {
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
 
   const next = () => {
-    setCurrentIndex((prev) => (prev + 1) % testimonials.length)
-  }
+    setDirection(1);
+    setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+  };
 
   const prev = () => {
-    setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length)
-  }
+    setDirection(-1);
+    setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+  };
+
+  const slideVariants = {
+    enter: (direction) => ({
+      x: direction > 0 ? 1000 : -1000,
+      opacity: 0
+    }),
+    center: {
+      zIndex: 1,
+      x: 0,
+      opacity: 1
+    },
+    exit: (direction) => ({
+      zIndex: 0,
+      x: direction < 0 ? 1000 : -1000,
+      opacity: 0
+    })
+  };
 
   return (
     <section className="py-20 bg-gray-50 dark:bg-gray-800">
@@ -62,13 +82,18 @@ export default function Testimonials() {
         </motion.div>
 
         <div className="relative max-w-4xl mx-auto">
-          <AnimatePresence mode="wait">
+          <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
               key={currentIndex}
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -100 }}
-              transition={{ duration: 0.3 }}
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{
+                x: { type: "spring", stiffness: 300, damping: 30 },
+                opacity: { duration: 0.2 }
+              }}
               className="bg-white dark:bg-gray-700 p-8 md:p-12 rounded-2xl shadow-lg"
             >
               <Quote className="text-blue-500 w-12 h-12 mb-6 opacity-20" />
@@ -81,9 +106,15 @@ export default function Testimonials() {
                   />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">{testimonials[currentIndex].name}</h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">{testimonials[currentIndex].company}</p>
-                  <p className="text-gray-700 dark:text-gray-300 text-lg mb-4 italic">"{testimonials[currentIndex].text}"</p>
+                  <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
+                    {testimonials[currentIndex].name}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+                    {testimonials[currentIndex].company}
+                  </p>
+                  <p className="text-gray-700 dark:text-gray-300 text-lg mb-4 italic">
+                    "{testimonials[currentIndex].text}"
+                  </p>
                   <div className="flex text-yellow-400">
                     {[...Array(testimonials[currentIndex].rating)].map((_, i) => (
                       <Star key={i} className="w-5 h-5 fill-current" />
@@ -110,6 +141,6 @@ export default function Testimonials() {
         </div>
       </div>
     </section>
-  )
+  );
 }
 

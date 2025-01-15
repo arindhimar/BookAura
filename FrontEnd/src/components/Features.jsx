@@ -1,28 +1,33 @@
 import { motion } from 'framer-motion'
-import { BookOpen, Smartphone, CloudLightning, Headphones } from 'lucide-react'
+import { BookOpen, BookmarkCheck, Globe, BarChart2, PenTool } from 'lucide-react';
 
 const features = [
   {
     icon: BookOpen,
-    title: 'Vast Library',
-    description: 'Access thousands of eBooks across various genres and topics.',
+    title: 'Diversity of media',
+    description: 'Dive into a world of eBooks and audiobooks, all at your fingertips.',
   },
   {
-    icon: Smartphone,
-    title: 'Read Anywhere',
-    description: 'Enjoy your books on any device, anytime, anywhere.',
+    icon: BookmarkCheck,
+    title: 'Track Your Journey',
+    description: 'Keep tabs on your reading progress and never lose your place with convenient bookmarking.',
   },
   {
-    icon: CloudLightning,
-    title: 'Instant Access',
-    description: 'Start reading immediately after purchase with instant downloads.',
+    icon: Globe,
+    title: 'Seamless Multi-Language Support',
+    description: 'Enjoy your books in a variety of languages, including English, Hindi, and Marathi.',
   },
   {
-    icon: Headphones,
-    title: 'Audio Books',
-    description: 'Listen to your favorite books with our audio book collection.',
+    icon: BarChart2,
+    title: 'Data-Driven Insights',
+    description: 'Gain valuable insights with detailed feedback tracking to enhance your reading experience.',
   },
-]
+  {
+    icon: PenTool,
+    title: 'Become a Creator',
+    description: 'Join our community as an author and share your books with the world!',
+  },
+];
 
 export default function Features() {
   return (
@@ -37,7 +42,7 @@ export default function Features() {
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
             Why Choose{' '}
             <span className="text-blue-500">
-              EBookHub
+              BookAura
             </span>
           </h2>
           <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
@@ -45,7 +50,7 @@ export default function Features() {
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
           {features.map((feature, index) => (
             <motion.div
               key={feature.title}
