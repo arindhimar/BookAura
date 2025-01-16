@@ -7,8 +7,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useTheme } from "@/contexts/ThemeContext"
+} from "../../components/ui/dropdown-menu"
+import { useTheme } from "../../contexts/ThemeContext"
 
 export function Header({ isSidebarOpen, onMenuClick }) {
   const { toggleDarkMode } = useTheme()

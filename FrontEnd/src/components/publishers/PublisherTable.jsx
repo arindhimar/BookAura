@@ -5,9 +5,9 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-  } from "@/components/ui/table"
-  import { Badge } from "@/components/ui/badge"
-  import { Button } from "@/components/ui/button"
+  } from "../../components/ui/table"
+  import { Badge } from "../../components/ui/badge"
+  import { Button } from "../../components/ui/button"
   import {
     DropdownMenu,
     DropdownMenuContent,
@@ -15,7 +15,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-  } from "@/components/ui/dropdown-menu"
+  } from "../../components/ui/dropdown-menu"
   import { MoreHorizontal, Flag } from 'lucide-react'
   
   const publishers = [

@@ -1,5 +1,5 @@
-import { cn } from "../lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "../../lib/utils"
+import { Button } from "../../components/ui/button"
 import { LayoutDashboard, Users, FileText, Settings, BookOpen } from 'lucide-react'
 import { useLocation, Link } from "react-router-dom"
 

@@ -1,5 +1,5 @@
-import { Button } from "../ui/button"
-import { PublisherTable } from "@/components/publishers/PublisherTable"
+import { Button } from "../components/ui/button"
+import { PublisherTable } from "../components/publishers/PublisherTable"
 import { Plus } from 'lucide-react'
 
 export default function Publishers() {
