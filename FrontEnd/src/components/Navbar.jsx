@@ -2,14 +2,12 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Book, Menu, X, Sun, Moon } from 'lucide-react'
-import { useTheme } from '../contexts/ThemeContext';
-
+import { useTheme } from '../contexts/ThemeContext'
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { isDarkMode, toggleDarkMode } = useTheme();
-
+  const { theme, toggleTheme } = useTheme()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,8 +16,6 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
-
-
 
   return (
     <motion.nav 
@@ -43,30 +39,25 @@ export default function Navbar() {
             </span>
           </Link>
           
-          {/* <div className="hidden md:flex items-center space-x-8">
-            {['Home', 'Books', 'How It Works', 'Pricing', 'Contact'].map((item) => (
-              <motion.div
-                key={item}
-                whileHover={{ y: -2 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                <Link 
-                  to={`/${item.toLowerCase().replace(' ', '-')}`} 
-                  className="text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 font-medium transition-colors"
-                >
-                  {item}
-                </Link>
-              </motion.div>
-            ))}
-          </div> */}
-
           <div className="hidden md:flex items-center space-x-4">
-            <button
-              onClick={toggleDarkMode}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={toggleTheme}
               className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
-              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={theme}
+                  initial={{ y: -20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 20, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </motion.div>
+              </AnimatePresence>
+            </motion.button>
             <Link to="/signup">
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -79,12 +70,24 @@ export default function Navbar() {
           </div>
 
           <div className="md:hidden flex items-center space-x-4">
-            <button
-              onClick={toggleDarkMode}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={toggleTheme}
               className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
-              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={theme}
+                  initial={{ y: -20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 20, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </motion.div>
+              </AnimatePresence>
+            </motion.button>
             <button 
               className="text-gray-600 dark:text-gray-300"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

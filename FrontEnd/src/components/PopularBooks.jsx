@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { Star } from 'lucide-react'
+import { GradientButton } from './ui/GradientButton'
 
 const books = [
   {
@@ -28,7 +29,7 @@ const books = [
   },
 ]
 
-export default function PopularBooks() {
+export default function PopularBooks({ openRegister }) {
   return (
     <section className="py-20 bg-gray-50 dark:bg-gray-800">
       <div className="container mx-auto px-4">
@@ -77,6 +78,23 @@ export default function PopularBooks() {
             </motion.div>
           ))}
         </div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-16 text-center"
+        >
+          <h3 className="text-2xl md:text-3xl font-bold mb-4 text-gray-900 dark:text-white">
+            Join the Publisher Community
+          </h3>
+          <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8">
+            Are you an author or publisher? Join our community and share your books with millions of readers worldwide.
+          </p>
+          <GradientButton onClick={openRegister}>
+            Become a Publisher
+          </GradientButton>
+        </motion.div>
       </div>
     </section>
   )

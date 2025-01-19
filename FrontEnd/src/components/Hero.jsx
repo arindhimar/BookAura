@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import { GradientButton } from './ui/GradientButton';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -45,12 +46,9 @@ export default function Hero({ openLogin, openRegister }) {
               className="flex flex-wrap gap-4"
               {...fadeInUp}
             >
-              <button
-                onClick={openRegister}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full transition-colors duration-300"
-              >
+              <GradientButton onClick={openRegister}>
                 Get Started
-              </button>
+              </GradientButton>
               
               <button
                 onClick={openLogin}

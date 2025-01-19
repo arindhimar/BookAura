@@ -1,9 +1,9 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Book, Facebook, Instagram, Twitter, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 export default function Footer() {
-  const { isDarkMode, toggleDarkMode } = useTheme();
+  const { theme, toggleTheme } = useTheme();
 
   const footerSections = [
     {
@@ -84,12 +84,24 @@ export default function Footer() {
           <p className="text-gray-600 dark:text-gray-300">
             © {new Date().getFullYear()} BookAura. All rights reserved.
           </p>
-          <button
-            onClick={toggleDarkMode}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={toggleTheme}
             className="p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
-            {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={theme}
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 20, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </motion.div>
+            </AnimatePresence>
+          </motion.button>
         </motion.div>
       </div>
     </footer>

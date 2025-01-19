@@ -4,7 +4,6 @@ import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import Features from '../components/Features';
 import PopularBooks from '../components/PopularBooks';
-import HowItWorks from '../components/HowItWorks';
 import Testimonials from '../components/Testimonials';
 import FAQ from '../components/FAQ';
 import CTA from '../components/CTA';
@@ -13,23 +12,28 @@ import LoginDialog from '../components/LoginDialog';
 import RegisterDialog from '../components/RegisterDialog';
 
 export default function LandingPage() {
-  const { isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [isPublisherRegisterOpen, setIsPublisherRegisterOpen] = useState(false);
+
+  const openLogin = () => setIsLoginOpen(true);
+  const openRegister = () => setIsRegisterOpen(true);
+  const openPublisherRegister = () => setIsPublisherRegisterOpen(true);
 
   return (
-    <main className={`bg-gray-50 ${isDarkMode ? 'dark' : ''}`}>
-      <Navbar />
-      <Hero openLogin={() => setIsLoginOpen(true)} openRegister={() => setIsRegisterOpen(true)} />
+    <main className={`bg-gray-50 ${theme === 'dark' ? 'dark' : ''}`}>
+      <Navbar openLogin={openLogin} openRegister={openRegister} />
+      <Hero openLogin={openLogin} openRegister={openRegister} />
       <Features />
-      <PopularBooks />
-      <HowItWorks />
+      <PopularBooks openPublisherRegister={openPublisherRegister} />
       <Testimonials />
       <FAQ />
-      <CTA openRegister={() => setIsRegisterOpen(true)} />
+      <CTA openRegister={openRegister} />
       <Footer />
       <LoginDialog isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
-      <RegisterDialog isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} />
+      <RegisterDialog isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} isPublisher={false} />
+      <RegisterDialog isOpen={isPublisherRegisterOpen} onClose={() => setIsPublisherRegisterOpen(false)} isPublisher={true} />
     </main>
   );
 }

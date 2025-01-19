@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 
-export default function GradientButton({ children, className = '', ...props }) {
+export function GradientButton({ children, className = '', ...props }) {
   return (
     <motion.button
       whileHover={{ scale: 1.02 }}

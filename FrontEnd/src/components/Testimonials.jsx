@@ -1,143 +1,110 @@
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Star, Quote } from 'lucide-react'
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Star } from 'lucide-react';
+import Left from './2.jpeg';
 
 const testimonials = [
   {
-    id: 1,
-    name: "Sarah Johnson",
-    company: "TechCorp Inc.",
-    text: "BookAura has transformed my reading experience. Their vast collection and user-friendly interface are unmatched.",
+    name: 'Sarah Johnson',
+    role: 'Avid Reader',
+    content: 'BookAura has transformed my reading experience. The variety of books and the seamless interface make it a joy to use every day.',
     rating: 5,
-    image: "/placeholder.svg?height=100&width=100"
   },
   {
-    id: 2,
-    name: "Michael Chen",
-    company: "StartUp Labs",
-    text: "The convenience of having my entire library at my fingertips is incredible. BookAura has made reading on-the-go a breeze.",
+    name: 'Michael Chen',
+    role: 'Self-published Author',
+    content: 'As an author, BookAura has given me a platform to reach readers I never thought possible. The support for indie authors is unparalleled.',
     rating: 5,
-    image: "/placeholder.svg?height=100&width=100"
   },
   {
-    id: 3,
-    name: "Emma Davis",
-    company: "Growth Solutions",
-    text: "I've discovered so many new authors and genres thanks to BookAura. It's expanded my literary horizons.",
-    rating: 5,
-    image: "/placeholder.svg?height=100&width=100"
-  }
-]
+    name: 'Emily Rodriguez',
+    role: 'Book Club Organizer',
+    content: 'Our book club loves using BookAura. The discussion features and reading progress tracking have made our meetings more engaging and insightful.',
+    rating: 4,
+  },
+];
+
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 }
+};
+
+function ImageAnimation({ className = "" }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5 }}
+      className={`relative w-full lg:w-1/4 aspect-square ${className}`}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-full blur-3xl opacity-30" />
+      <motion.div
+        className="relative z-10 w-full h-full"
+        animate={{
+          y: [0, -10, 0],
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          repeatType: "reverse",
+        }}
+      >
+        <img
+          src={Left || "/placeholder.svg"}
+          alt="BookAura illustration showing headphones with books and people reading"
+          className="w-full h-full object-contain"
+        />
+      </motion.div>
+    </motion.div>
+  );
+}
 
 export default function Testimonials() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
-
-  const next = () => {
-    setDirection(1);
-    setCurrentIndex((prev) => (prev + 1) % testimonials.length);
-  };
-
-  const prev = () => {
-    setDirection(-1);
-    setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
-  };
-
-  const slideVariants = {
-    enter: (direction) => ({
-      x: direction > 0 ? 1000 : -1000,
-      opacity: 0
-    }),
-    center: {
-      zIndex: 1,
-      x: 0,
-      opacity: 1
-    },
-    exit: (direction) => ({
-      zIndex: 0,
-      x: direction < 0 ? 1000 : -1000,
-      opacity: 0
-    })
-  };
-
   return (
-    <section className="py-20 bg-gray-50 dark:bg-gray-800">
+    <section className="py-20 bg-gray-50 dark:bg-gray-900 overflow-hidden">
       <div className="container mx-auto px-4">
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
           className="text-center mb-16"
+          {...fadeInUp}
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-            What Our{' '}
-            <span className="text-blue-500">
-              Readers
-            </span>{' '}
-            Say
+            What Our Users Say
           </h2>
           <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Discover how BookAura has enhanced the reading experience for our community
+            Discover how BookAura is changing the way people read and share stories
           </p>
         </motion.div>
 
-        <div className="relative max-w-4xl mx-auto">
-          <AnimatePresence initial={false} custom={direction} mode="wait">
-            <motion.div
-              key={currentIndex}
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                x: { type: "spring", stiffness: 300, damping: 30 },
-                opacity: { duration: 0.2 }
-              }}
-              className="bg-white dark:bg-gray-700 p-8 md:p-12 rounded-2xl shadow-lg"
-            >
-              <Quote className="text-blue-500 w-12 h-12 mb-6 opacity-20" />
-              <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-                <div className="relative w-20 h-20 rounded-full overflow-hidden flex-shrink-0">
-                  <img
-                    src={testimonials[currentIndex].image || "/placeholder.svg"}
-                    alt={testimonials[currentIndex].name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
-                    {testimonials[currentIndex].name}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                    {testimonials[currentIndex].company}
-                  </p>
-                  <p className="text-gray-700 dark:text-gray-300 text-lg mb-4 italic">
-                    "{testimonials[currentIndex].text}"
-                  </p>
-                  <div className="flex text-yellow-400">
-                    {[...Array(testimonials[currentIndex].rating)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 fill-current" />
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+          <ImageAnimation className="hidden lg:block" />
+          
+          <div className="w-full lg:w-1/2 space-y-6">
+            {testimonials.map((testimonial, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.2 }}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6"
+              >
+                <div className="flex items-center mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{testimonial.name}</h3>
+                    <p className="text-gray-600 dark:text-gray-300">{testimonial.role}</p>
+                  </div>
+                  <div className="flex">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
                     ))}
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          </AnimatePresence>
+                <p className="text-gray-600 dark:text-gray-300">{testimonial.content}</p>
+              </motion.div>
+            ))}
+          </div>
 
-          <button
-            onClick={prev}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 md:-translate-x-12 bg-white dark:bg-gray-700 p-3 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-blue-500 transition-all duration-300 z-10"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          
-          <button
-            onClick={next}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 md:translate-x-12 bg-white dark:bg-gray-700 p-3 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-blue-500 transition-all duration-300 z-10"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
+          <ImageAnimation className="hidden lg:block" />
         </div>
       </div>
     </section>
