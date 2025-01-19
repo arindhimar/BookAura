@@ -22,36 +22,37 @@ CREATE TABLE platform_administrators (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
-
 CREATE TABLE moderators (
     moderator_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
+    is_flagged BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
-
 
 CREATE TABLE publishers (
     publisher_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
+    is_flagged BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
-
 
 CREATE TABLE authors (
     author_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     bio TEXT,
     is_verified BOOLEAN DEFAULT FALSE,
+    is_flagged BOOLEAN DEFAULT FALSE,
+    is_approved BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
 CREATE TABLE normal_users (
     normal_user_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    additional_info TEXT, -- For any additional info you may want for normal users
+    additional_info TEXT,
+    is_flagged BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
-
 
 CREATE TABLE books (
     book_id INT AUTO_INCREMENT PRIMARY KEY,

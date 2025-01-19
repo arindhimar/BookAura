@@ -10,6 +10,7 @@ import CTA from '../components/CTA';
 import Footer from '../components/Footer';
 import LoginDialog from '../components/LoginDialog';
 import RegisterDialog from '../components/RegisterDialog';
+import PublisherRegisterDialog from '../components/PublisherRegisterDialog';
 
 export default function LandingPage() {
   const { theme } = useTheme();
@@ -19,7 +20,10 @@ export default function LandingPage() {
 
   const openLogin = () => setIsLoginOpen(true);
   const openRegister = () => setIsRegisterOpen(true);
-  const openPublisherRegister = () => setIsPublisherRegisterOpen(true);
+  const openPublisherRegister = () => {
+    console.log('Opening publisher register dialog');
+    setIsPublisherRegisterOpen(true);
+  };
 
   return (
     <main className={`bg-gray-50 ${theme === 'dark' ? 'dark' : ''}`}>
@@ -31,9 +35,9 @@ export default function LandingPage() {
       <FAQ />
       <CTA openRegister={openRegister} />
       <Footer />
-      <LoginDialog isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
-      <RegisterDialog isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} isPublisher={false} />
-      <RegisterDialog isOpen={isPublisherRegisterOpen} onClose={() => setIsPublisherRegisterOpen(false)} isPublisher={true} />
+      <LoginDialog isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} openRegister={openRegister} />
+      <RegisterDialog isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} openLogin={openLogin} isPublisher={false} />
+      <PublisherRegisterDialog isOpen={isPublisherRegisterOpen} onClose={() => setIsPublisherRegisterOpen(false)} openLogin={openLogin} />
     </main>
   );
 }

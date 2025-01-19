@@ -1,34 +1,28 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import { GradientButton } from './ui/GradientButton';
-import process from 'process';
+import DialogHeader from './DialogHeader';
 
-export default function LoginDialog({ isOpen, onClose }) {
+export default function LoginDialog({ isOpen, onClose, openRegister }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const BASE_API_URL = process.env.REACT_APP_BASE_API_URL || 'http://127.0.0.1:5000';
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    console.log("API Base URL:", BASE_API_URL);
 
     try {
-      const response = await fetch(`${BASE_API_URL}/auth/login`, {
+      const response = await fetch(`${process.env.REACT_APP_BASE_API_URL}/auth/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // Store token and user data
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         onClose();
@@ -41,7 +35,6 @@ export default function LoginDialog({ isOpen, onClose }) {
     }
   };
 
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -49,60 +42,57 @@ export default function LoginDialog({ isOpen, onClose }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md"
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 400 }}
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md"
           >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Login</h2>
-              <button
-                onClick={onClose}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
-              >
-                <X size={24} />
-              </button>
-            </div>
+            <DialogHeader title="Login" onClose={onClose} />
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Email
-                </label>
+              <div className="relative">
+                <Mail className="absolute top-3 left-3 text-gray-400" size={20} />
                 <input
                   type="email"
-                  id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="pl-10 w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Email"
                 />
               </div>
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Password
-                </label>
+              <div className="relative">
+                <Lock className="absolute top-3 left-3 text-gray-400" size={20} />
                 <input
                   type="password"
-                  id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="pl-10 w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Password"
                 />
               </div>
               {error && <p className="text-red-500 text-sm">{error}</p>}
               <GradientButton type="submit" className="w-full">
                 Login
               </GradientButton>
+              <p className="text-center mt-4 text-sm text-gray-600 dark:text-gray-400">
+                New user? {' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    openRegister();
+                  }}
+                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  Register here
+                </button>
+              </p>
             </form>
           </motion.div>
         </motion.div>
@@ -110,3 +100,4 @@ export default function LoginDialog({ isOpen, onClose }) {
     </AnimatePresence>
   );
 }
+

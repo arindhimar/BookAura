@@ -29,7 +29,7 @@ const books = [
   },
 ]
 
-export default function PopularBooks({ openRegister }) {
+export default function PopularBooks({ openPublisherRegister }) {
   return (
     <section className="py-20 bg-gray-50 dark:bg-gray-800">
       <div className="container mx-auto px-4">
@@ -91,7 +91,7 @@ export default function PopularBooks({ openRegister }) {
           <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8">
             Are you an author or publisher? Join our community and share your books with millions of readers worldwide.
           </p>
-          <GradientButton onClick={openRegister}>
+          <GradientButton onClick={openPublisherRegister}>
             Become a Publisher
           </GradientButton>
         </motion.div>
