@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X } from "lucide-react"
+import { Mail, Lock, Book } from "lucide-react"
 import { GradientButton } from "./ui/GradientButton"
 
-export default function LoginDialog({ isOpen, onClose }) {
+export default function LoginDialog({ isOpen, onClose, openRegister }) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -13,25 +13,20 @@ export default function LoginDialog({ isOpen, onClose }) {
     setError("")
 
     try {
-      const response = await fetch("http://your-api-url/login", {
+      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/auth/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        // Login successful
         localStorage.setItem("token", data.token)
         localStorage.setItem("user", JSON.stringify(data.user))
         onClose()
-        // Redirect to dashboard or appropriate page
         window.location.href = "/dashboard"
       } else {
-        // Login failed
         setError(data.error || "Invalid email or password")
       }
     } catch (error) {
@@ -46,55 +41,117 @@ export default function LoginDialog({ isOpen, onClose }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md"
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden w-full max-w-3xl shadow-xl flex"
           >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Login</h2>
-              <button
-                onClick={onClose}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 bg-white dark:bg-gray-800 rounded-full p-1"
-              >
-                <X size={24} />
-              </button>
+            {/* Left Side - Illustration */}
+            <div className="hidden md:block w-1/2 relative bg-gradient-to-br from-purple-600 to-blue-500 p-8">
+              <div className="absolute inset-0 bg-black/20" />
+              <div className="relative z-10">
+                <Book className="w-12 h-12 text-white mb-4" />
+                <h2 className="text-2xl font-bold text-white mb-4">Welcome back to BookAura</h2>
+                <p className="text-white/90 text-lg">Your journey through infinite stories continues here.</p>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-2/3 bg-gradient-to-t from-black/40 to-transparent" />
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
+
+            {/* Right Side - Login Form */}
+            <div className="w-full md:w-1/2 p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Login</h2>
+                <button
+                  onClick={onClose}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <span className="sr-only">Close</span>
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
+
+              <div className="space-y-4 mb-4">
+                <button
+                  disabled
+                  className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+                >
+                  <img src="/google.svg" alt="Google" className="w-5 h-5 opacity-50" />
+                  Sign in with Google (Coming Soon)
+                </button>
               </div>
-              {error && <p className="text-red-500 text-sm">{error}</p>}
-              <GradientButton type="submit" className="w-full">
-                Login
-              </GradientButton>
-            </form>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white dark:bg-gray-900 text-gray-500">Or continue with</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Enter your email"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Enter your password"
+                    />
+                  </div>
+                </div>
+
+                {error && <p className="text-sm text-red-600 dark:text-red-500">{error}</p>}
+
+                <GradientButton type="submit" className="w-full py-2">
+                  Sign in
+                </GradientButton>
+
+                <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+                  Don't have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose()
+                      openRegister()
+                    }}
+                    className="font-medium text-purple-600 hover:text-purple-500 dark:text-purple-400 dark:hover:text-purple-300"
+                  >
+                    Sign up
+                  </button>
+                </p>
+              </form>
+            </div>
           </motion.div>
         </motion.div>
       )}

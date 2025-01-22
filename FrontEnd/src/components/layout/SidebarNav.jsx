@@ -1,8 +1,7 @@
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
-import { LayoutDashboard, Users, FileText, Settings, BookOpen, DollarSign, Star } from "lucide-react"
+import { LayoutDashboard, Users, FileText, Settings, BookOpen, DollarSign, Star, X } from "lucide-react"
 import { useLocation, Link } from "react-router-dom"
-import { X } from "lucide-react"
 
 const adminItems = [
   {
@@ -84,38 +83,39 @@ export function SidebarNav({ isOpen, onClose, userRole }) {
   const items = userRole === "admin" ? adminItems : userRole === "publisher" ? publisherItems : authorItems
 
   return (
-    <nav
+    <div
       className={cn(
-        "fixed left-0 top-14 z-30 h-[calc(100vh-3.5rem)] w-64 shrink-0 overflow-y-auto border-r bg-background transition-all duration-300 ease-in-out md:sticky",
-        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+        isOpen ? "translate-x-0" : "-translate-x-full",
       )}
     >
-      <div className="flex justify-between items-center p-4 md:hidden">
-        <img src="/bookaura-logo.png" alt="BookAura Logo" className="h-8 w-auto" />
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-5 w-5" />
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <Link to="/" className="flex items-center space-x-2">
+          <img src="/bookaura-logo.png" alt="BookAura Logo" className="h-8 w-auto" />
+          <span className="text-xl font-semibold text-gray-800 dark:text-white">BookAura</span>
+        </Link>
+        <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden">
+          <X className="h-6 w-6" />
         </Button>
       </div>
-      <div className="space-y-4 py-4">
-        <div className="px-3 py-2">
-          <div className="space-y-1">
-            {items.map((item) => (
-              <Button
-                key={item.href}
-                variant={location.pathname === item.href ? "secondary" : "ghost"}
-                className="w-full justify-start"
-                asChild
-              >
-                <Link to={item.href}>
-                  <item.icon className="mr-2 h-4 w-4" />
-                  {item.title}
-                </Link>
-              </Button>
-            ))}
-          </div>
+      <nav className="mt-5 px-2">
+        <div className="space-y-1">
+          {items.map((item) => (
+            <Button
+              key={item.href}
+              variant={location.pathname === item.href ? "secondary" : "ghost"}
+              className="w-full justify-start"
+              asChild
+            >
+              <Link to={item.href}>
+                <item.icon className="mr-3 h-5 w-5" />
+                {item.title}
+              </Link>
+            </Button>
+          ))}
         </div>
-      </div>
-    </nav>
+      </nav>
+    </div>
   )
 }
 

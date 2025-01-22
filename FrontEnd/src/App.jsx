@@ -1,17 +1,22 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useState } from "react";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import  LandingPage from "./pages/LandingPage";
-import  DashboardLayout  from "./components/layout/DashboardLayout";
-import  Dashboard  from "./pages/Dashboard";
-import PublisherDashboard from "./pages/PublisherDashboard";
-import AuthorDashboard from "./pages/AuthorDashboard";
-import ManagePublishers from "./pages/ManagePublishers";
-import Agreements from "./pages/Agreements";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
+import { useState } from "react"
+import { ThemeProvider } from "./contexts/ThemeContext"
+import  LandingPage  from "./pages/LandingPage"
+import  DashboardLayout  from "./components/layout/DashboardLayout"
+import  Dashboard  from "./pages/Dashboard"
+import PublisherDashboard from "./pages/PublisherDashboard"
+import AuthorDashboard from "./pages/AuthorDashboard"
+import ManagePublishers from "./pages/ManagePublishers"
+import Agreements from "./pages/Agreements"
+import ManageBooks from "./pages/publisher/ManageBooks"
+import Analytics from "./pages/publisher/Analytics"
+import MyBooks from "./pages/author/MyBooks"
+import Reviews from "./pages/author/Reviews"
+import Settings from "./pages/Settings"
 
 function App() {
   // In a real application, you would get the user role from your authentication system
-  const [userRole, setUserRole] = useState("author") // 'admin', 'publisher', or 'author'
+  const [userRole, setUserRole] = useState("admin") // 'admin', 'publisher', or 'author'
 
   return (
     <ThemeProvider>
@@ -70,6 +75,30 @@ function App() {
               )
             }
           />
+          <Route
+            path="/publisher/books"
+            element={
+              userRole === "publisher" ? (
+                <DashboardLayout userRole={userRole}>
+                  <ManageBooks />
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="/publisher/analytics"
+            element={
+              userRole === "publisher" ? (
+                <DashboardLayout userRole={userRole}>
+                  <Analytics />
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
 
           {/* Author Routes */}
           <Route
@@ -78,6 +107,44 @@ function App() {
               userRole === "author" ? (
                 <DashboardLayout userRole={userRole}>
                   <AuthorDashboard />
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="/author/books"
+            element={
+              userRole === "author" ? (
+                <DashboardLayout userRole={userRole}>
+                  <MyBooks />
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="/author/reviews"
+            element={
+              userRole === "author" ? (
+                <DashboardLayout userRole={userRole}>
+                  <Reviews />
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          {/* Shared Routes */}
+          <Route
+            path="/settings"
+            element={
+              userRole ? (
+                <DashboardLayout userRole={userRole}>
+                  <Settings />
                 </DashboardLayout>
               ) : (
                 <Navigate to="/" replace />
