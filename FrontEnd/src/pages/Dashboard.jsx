@@ -38,10 +38,10 @@ export default function Dashboard() {
         }
 
         // Send a request to /auth/me
-        const response = await fetch(`${process.env.REACT_APP_BASE_API_URL}/auth/me`, {
+        const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/auth/me`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': token,
           },
         });
 

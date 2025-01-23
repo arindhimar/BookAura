@@ -1,38 +1,80 @@
-import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Mail, Lock, Book } from "lucide-react"
-import { GradientButton } from "./ui/GradientButton"
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Mail, Lock, Book } from "lucide-react";
+import { GradientButton } from "./ui/GradientButton";
+import { useUser } from "../contexts/UserContext";
+import { useNavigate } from "react-router-dom";
 
 export default function LoginDialog({ isOpen, onClose, openRegister }) {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [formState, setFormState] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useUser();
+  const navigate = useNavigate();
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormState((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError("")
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
 
     try {
       const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      })
+        body: JSON.stringify(formState),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
-      if (response.ok) {
-        localStorage.setItem("token", data.token)
-        localStorage.setItem("user", JSON.stringify(data.user))
-        onClose()
-        window.location.href = "/dashboard"
-      } else {
-        setError(data.error || "Invalid email or password")
+      if (!response.ok) {
+        throw new Error(data.error || "Invalid email or password");
       }
-    } catch (error) {
-      setError("An error occurred. Please try again.")
+
+      const userResponse = await fetch(`${import.meta.env.VITE_BASE_API_URL}/auth/me`, {
+        method: "GET",
+        headers: {
+          Authorization: data.token,
+        },
+      });
+
+      if (!userResponse.ok) {
+        throw new Error("Failed to fetch user details.");
+      }
+
+      const userData = await userResponse.json();
+      login(userData.user);
+      localStorage.setItem("token", data.token);
+
+      onClose();
+      redirectToDashboard(userData.user.role_id);
+    } catch (err) {
+      setError(err.message || "An unexpected error occurred.");
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
+
+  const redirectToDashboard = (roleId) => {
+    switch (roleId) {
+      case 1:
+        navigate("/admin");
+        break;
+      case 2:
+        navigate("/publisher");
+        break;
+      case 3:
+        navigate("/author");
+        break;
+      default:
+        navigate("/");
+        break;
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -103,9 +145,10 @@ export default function LoginDialog({ isOpen, onClose, openRegister }) {
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
                     <input
                       id="email"
+                      name="email"
                       type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      value={formState.email}
+                      onChange={handleInputChange}
                       required
                       className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Enter your email"
@@ -121,9 +164,10 @@ export default function LoginDialog({ isOpen, onClose, openRegister }) {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
                     <input
                       id="password"
+                      name="password"
                       type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={formState.password}
+                      onChange={handleInputChange}
                       required
                       className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Enter your password"
@@ -132,8 +176,9 @@ export default function LoginDialog({ isOpen, onClose, openRegister }) {
                 </div>
 
                 {error && <p className="text-sm text-red-600 dark:text-red-500">{error}</p>}
+                {isLoading && <p className="text-sm text-gray-600 dark:text-gray-400">Logging in...</p>}
 
-                <GradientButton type="submit" className="w-full py-2">
+                <GradientButton type="submit" className="w-full py-2" disabled={isLoading}>
                   Sign in
                 </GradientButton>
 
@@ -142,8 +187,8 @@ export default function LoginDialog({ isOpen, onClose, openRegister }) {
                   <button
                     type="button"
                     onClick={() => {
-                      onClose()
-                      openRegister()
+                      onClose();
+                      openRegister();
                     }}
                     className="font-medium text-purple-600 hover:text-purple-500 dark:text-purple-400 dark:hover:text-purple-300"
                   >
@@ -156,6 +201,5 @@ export default function LoginDialog({ isOpen, onClose, openRegister }) {
         </motion.div>
       )}
     </AnimatePresence>
-  )
+  );
 }
-

@@ -1,6 +1,6 @@
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
-import { LayoutDashboard, Users, FileText, Settings, BookOpen, DollarSign, Star, X } from "lucide-react"
+import { LayoutDashboard, Users, FileText, Settings, BookOpen, DollarSign, Star, X ,Book} from "lucide-react"
 import { useLocation, Link } from "react-router-dom"
 
 const adminItems = [
@@ -90,10 +90,10 @@ export function SidebarNav({ isOpen, onClose, userRole }) {
       )}
     >
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <Link to="/" className="flex items-center space-x-2">
-          <img src="/bookaura-logo.png" alt="BookAura Logo" className="h-8 w-auto" />
+        <div className="flex items-center space-x-2">
+          <Book className="h-8 w-8 text-blue-500" />
           <span className="text-xl font-semibold text-gray-800 dark:text-white">BookAura</span>
-        </Link>
+        </div>
         <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden">
           <X className="h-6 w-6" />
         </Button>

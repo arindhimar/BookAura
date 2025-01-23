@@ -1,4 +1,4 @@
-import { Bell, Menu, Sun, Moon, LogOut } from "lucide-react"
+import { Bell, Menu, Sun, Moon, LogOut,Book } from "lucide-react"
 import { Button } from "../ui/button"
 import {
   DropdownMenu,
@@ -16,7 +16,8 @@ export function Header({ onMenuClick }) {
   const navigate = useNavigate()
 
   const handleLogout = () => {
-    // Implement logout logic here
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
     navigate("/")
   }
 
@@ -28,7 +29,7 @@ export function Header({ onMenuClick }) {
             <Button variant="ghost" size="icon" onClick={onMenuClick} className="lg:hidden">
               <Menu className="h-6 w-6" />
             </Button>
-            <img src="/bookaura-logo.png" alt="BookAura Logo" className="h-8 w-auto ml-2 lg:ml-0" />
+
           </div>
           <div className="flex items-center">
             <DropdownMenu>
