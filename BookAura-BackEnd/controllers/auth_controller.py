@@ -3,8 +3,7 @@ from models.users import UsersModel
 from models.platform_administrators import PlatformAdministratorsModel
 from models.normal_users import NormalUsersModel
 from models.moderator import ModeratorsModel
-
-
+from models.publisher import PublishersModel
 from models.roles import RolesModel
 
 import jwt
@@ -16,7 +15,7 @@ users_model = UsersModel()
 platform_administrators_model = PlatformAdministratorsModel()
 normal_users_model = NormalUsersModel()
 moderators_model = ModeratorsModel()
-
+publishers_model = PublishersModel()
 
 roles_model = RolesModel()
 
