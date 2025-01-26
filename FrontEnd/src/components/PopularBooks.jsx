@@ -6,25 +6,25 @@ const books = [
   {
     title: "The Digital Mind",
     author: "Alex Johnson",
-    cover: "/placeholder.svg?height=300&width=200",
+    cover: "https://img.freepik.com/free-psd/feel-nature-flyer-template_23-2148607911.jpg?t=st=1737895809~exp=1737899409~hmac=e178ce3a705e8064a3e399d59cb59e73225175cd714b8637d251483683432f0a&w=740",
     rating: 4.5,
   },
   {
     title: "Code & Creativity",
     author: "Sarah Smith",
-    cover: "/placeholder.svg?height=300&width=200",
+    cover: "https://img.freepik.com/free-psd/feel-nature-flyer-template_23-2148607911.jpg?t=st=1737895809~exp=1737899409~hmac=e178ce3a705e8064a3e399d59cb59e73225175cd714b8637d251483683432f0a&w=740",
     rating: 4.8,
   },
   {
     title: "Future of AI",
     author: "Michael Brown",
-    cover: "/placeholder.svg?height=300&width=200",
+    cover: "https://img.freepik.com/free-psd/feel-nature-flyer-template_23-2148607911.jpg?t=st=1737895809~exp=1737899409~hmac=e178ce3a705e8064a3e399d59cb59e73225175cd714b8637d251483683432f0a&w=740",
     rating: 4.6,
   },
   {
     title: "Data Driven Life",
     author: "Emily Davis",
-    cover: "/placeholder.svg?height=300&width=200",
+    cover: "https://img.freepik.com/free-psd/feel-nature-flyer-template_23-2148607911.jpg?t=st=1737895809~exp=1737899409~hmac=e178ce3a705e8064a3e399d59cb59e73225175cd714b8637d251483683432f0a&w=740",
     rating: 4.7,
   },
 ]

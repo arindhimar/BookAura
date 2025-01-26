@@ -10,6 +10,9 @@ export const UserProvider = ({ children }) => {
     if (storedUser) {
       setUser(JSON.parse(storedUser))
     }
+    else{
+      setUser(null)
+    }
   }, [])
 
   const login = (userData) => {
