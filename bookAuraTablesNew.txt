@@ -33,6 +33,7 @@ CREATE TABLE publishers (
     publisher_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     is_flagged BOOLEAN DEFAULT FALSE,
+    is_approved BOOLEAN DEFAULT FALSE, -- Added column
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
