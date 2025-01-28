@@ -33,5 +33,3 @@ def delete_role(role_id):
         return jsonify({'error': 'Role not found'}), 404
     roles_model.delete_role(role_id)
     return jsonify({'message': 'Role deleted successfully'}), 200
-
-

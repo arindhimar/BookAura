@@ -25,13 +25,6 @@ class RolesModel:
         role = cur.fetchone()
         cur.close()
         return role
-    
-    def fetch_role_by_name(self, role_name):
-        cur = self.conn.cursor()
-        cur.execute('SELECT * FROM roles WHERE role_name = %s', (role_name,))
-        role = cur.fetchone()
-        cur.close()
-        return role
 
     def create_role(self, role_name):
         cur = self.conn.cursor()

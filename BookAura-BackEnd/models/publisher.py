@@ -42,6 +42,7 @@ class PublishersModel:
                 'is_approved': result[3],
             }
         return None    
+    
     def fetch_publisher_by_user_id(self, user_id):
         query = "SELECT * FROM publishers WHERE user_id = %s"
         cur = self.conn.cursor()
@@ -57,6 +58,8 @@ class PublishersModel:
                 'is_approved': result[3],
             }
         return None
+    
+    
     def create_publisher(self, user_id):
         cur = self.conn.cursor()
         cur.execute('INSERT INTO publishers (user_id) VALUES (%s)', (user_id,))

@@ -2,6 +2,7 @@ from flask import request, jsonify, Blueprint, current_app
 from models.users import UsersModel
 from models.platform_administrators import PlatformAdministratorsModel
 from models.normal_users import NormalUsersModel
+from models.moderator import ModeratorsModel
 from models.publisher import PublishersModel
 from models.roles import RolesModel
 
@@ -13,6 +14,7 @@ auth = Blueprint('auth', __name__)
 users_model = UsersModel()
 platform_administrators_model = PlatformAdministratorsModel()
 normal_users_model = NormalUsersModel()
+moderators_model = ModeratorsModel()
 publishers_model = PublishersModel()
 
 roles_model = RolesModel()
@@ -34,52 +36,43 @@ def generate_token(user_id, username, role_id):
 
 @auth.route('/register', methods=['POST'])
 def register():
-    # Get the JSON data from the request
     data = request.get_json()
+
     # Validate input fields
-    if 'name' not in data or 'email' not in data or 'password' not in data or 'role_name' not in data:
+    if 'username' not in data or 'email' not in data or 'password' not in data or 'role_id' not in data:
         return jsonify({'error': 'Missing required fields'}), 400
 
-    username = data['name']
+    username = data['username']
     email = data['email']
     password = data['password']
-    role_name = data['role_name']
-    
-    #check if role name exists in the roles table
-    if roles_model.fetch_role_by_name(role_name) is None:
-        return jsonify({'error': 'Invalid role name'}), 400
-        
-    
+    role_id = data['role_id']
+
+    # Check if the role ID exists in the roles table
+    if not roles_model.is_valid_role(role_id):
+        return jsonify({'error': 'Invalid role ID'}), 400
+
     # Check if the user already exists
     if users_model.fetch_user_by_email(email) is not None:
         return jsonify({'error': 'Email is already registered'}), 400
 
     hashed_password = generate_password_hash(password)
 
-    # Get the role ID
-    role_id = roles_model.fetch_role_by_name(role_name)[0]
-    
-
     # Create the user and get the user ID
-    user_id = users_model.create_user(username, email, hashed_password, role_id)    
-    
-    
-    if role_name == 'Platform Administrator':
+    user_id = users_model.create_user(username, email, hashed_password, role_id)
+
+    # Assign the user to the appropriate role-specific table
+    role_id = int(role_id)
+    if role_id == 1:
         platform_administrators_model.create_platform_administrator(user_id)
-    elif role_name == 'Publisher':
+    elif role_id == 2:
         publishers_model.create_publisher(user_id)
-    elif role_name == 'Author':
+    elif role_id == 3:
         authors_model.create_author(user_id)
-    elif role_name == 'Normal User':
-        normal_users_model.create_normal_user(user_id,"")
-    elif role_name == 'Moderator':
+    elif role_id == 4:
+        normal_users_model.create_normal_user(user_id)
+    elif role_id == 5:
         moderators_model.create_moderator(user_id)
-    else:
-        users_model.delete_user(user_id)
-        return jsonify({'error': 'Invalid role name'}), 400
-    
-    
-    
+
     return jsonify({'message': 'User registered successfully', 'user_id': user_id}), 201
 
 @auth.route('/login', methods=['POST'])
