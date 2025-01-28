@@ -37,7 +37,7 @@ export default function PublisherRegisterDialog({ isOpen, onClose, openLogin }) 
       const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, role_id: 2 }),
+        body: JSON.stringify({ ...formData, role_name:"Publisher  ",}),
       })
       const data = await response.json()
       if (response.ok) {

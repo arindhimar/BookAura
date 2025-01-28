@@ -35,7 +35,7 @@ export default function RegisterDialog({ isOpen, onClose, openLogin, isPublisher
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          role_id: isPublisher ? 2 : 4,
+          role_name:"Normal User",
         }),
       })
 
@@ -44,7 +44,7 @@ export default function RegisterDialog({ isOpen, onClose, openLogin, isPublisher
       if (response.ok) {
         localStorage.setItem("user", JSON.stringify(data))
         onClose()
-        window.location.href = "/dashboard"
+        
       } else {
         setError(data.error || "Registration failed")
       }
