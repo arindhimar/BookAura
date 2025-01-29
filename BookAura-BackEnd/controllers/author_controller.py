@@ -1,12 +1,12 @@
 from flask import request, jsonify, Blueprint
-from models.author import authorsModel
+from models.author import AuthorsModel
 
-app = Blueprint('author', name)
-authors_model = authorsModel()
+app = Blueprint('author', __name__)
+authors_model = AuthorsModel()
+
 
 @app.route('/', methods=['GET'])
 def get_all_authors():
-    print("get_all_authors")
     rows = authors_model.fetch_all_authors()
     authors = [{'author_id': row[0], 'user_id': row[1], 'is_flagged': row[2], 'is_approved': row[3]} for row in rows]
     return jsonify(authors)

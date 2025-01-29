@@ -5,6 +5,7 @@ class PlatformAdministratorsModel:
         self.conn = self.get_db_connection()
 
     def get_db_connection(self):
+        print("Connecting to database")
         return mysql.connector.connect(
             host="localhost",
             database="bookauradb",
