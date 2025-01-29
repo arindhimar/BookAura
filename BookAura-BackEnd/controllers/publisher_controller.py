@@ -6,7 +6,6 @@ publishers_model = PublishersModel()
 
 @app.route('/', methods=['GET'])
 def get_all_publishers():
-    print("get_all_publishers")
     rows = publishers_model.fetch_all_publishers()
     publishers = [{'publisher_id': row[0], 'user_id': row[1], 'is_flagged': row[2], 'is_approved': row[3]} for row in rows]
     return jsonify(publishers)
