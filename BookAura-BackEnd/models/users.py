@@ -21,7 +21,7 @@ class UsersModel:
 
     def fetch_user_by_id(self, user_id):
         cur = self.conn.cursor(dictionary=True)  # Use dictionary=True for key-value results
-        cur.execute('SELECT user_id,username,role_id FROM users WHERE user_id = %s', (user_id,))
+        cur.execute('SELECT user_id,username,role_id,email FROM users WHERE user_id = %s', (user_id,))
         user = cur.fetchone()
         cur.close()
         return user
@@ -58,12 +58,20 @@ class UsersModel:
         cur.close()
 
     def fetch_user_by_email(self, email):
-        cur = self.conn.cursor(dictionary=True)  # Use dictionary=True for key-value results
+        cur = self.conn.cursor(dictionary=True)  
         query = "SELECT user_id, username, email, password_hash, role_id FROM users WHERE email = %s"
         cur.execute(query, (email,))
         user = cur.fetchone()
         cur.close()
         return user
 
+    def fetch_password_hash(self, email):
+        cur = self.conn.cursor(dictionary=True)
+        query = "SELECT password_hash FROM users WHERE email = %s"
+        cur.execute(query, (email,))
+        password_hash = cur.fetchone()
+        cur.close()
+        return password_hash
+    
     def close_connection(self):
         self.conn.close()

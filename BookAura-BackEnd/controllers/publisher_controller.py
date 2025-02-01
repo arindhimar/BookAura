@@ -1,5 +1,7 @@
 from flask import request, jsonify, Blueprint
 from models.publisher import PublishersModel
+from middleware.auth import token_required
+
 
 app = Blueprint('publisher', __name__)
 publishers_model = PublishersModel()
@@ -32,3 +34,23 @@ def delete_publisher(publisher_id):
         return jsonify({'error': 'Publisher not found'}), 404
     publishers_model.delete_publisher(publisher_id)
     return jsonify({'message': 'Publisher deleted successfully'}), 200
+
+
+@app.route('/<int:publisher_id>/approve', methods=['POST'])
+@token_required
+def approve_publisher(publisher_id):
+    data = request.get_json()
+    if 'password' not in data:
+        return jsonify({'error': 'Missing required field: password'}), 400
+    
+
+    password = data['password']
+    hashed_password = users_model.fetch_password_hash(user_data['email'])
+    
+    if not check_password_hash(hashed_password['password_hash'], password):
+        return jsonify({'error': 'Invalid password'}), 401
+    
+    publishers_model.approve_publisher(publisher_id)
+    
+
+    return jsonify({'message': 'Publisher approved successfully'}), 200
