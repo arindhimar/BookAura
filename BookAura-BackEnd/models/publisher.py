@@ -71,6 +71,12 @@ class PublishersModel:
         cur.execute('DELETE FROM publishers WHERE publisher_id = %s', (publisher_id,))
         self.conn.commit()
         cur.close()
+        
+    def approve_publisher(self, publisher_id):
+        cur = self.conn.cursor()
+        cur.execute('UPDATE publishers SET is_approved = 1 WHERE publisher_id = %s', (publisher_id,))
+        self.conn.commit()
+        cur.close()
 
     def close_connection(self):
         self.conn.close()
