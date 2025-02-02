@@ -26,7 +26,7 @@ const adminItems = [
   },
   {
     title: "Settings",
-    href: "/admin/settings",
+    href: "/settings",
     icon: Settings,
   },
 ]
@@ -49,7 +49,7 @@ const publisherItems = [
   },
   {
     title: "Settings",
-    href: "/publisher/settings",
+    href: "/settings",
     icon: Settings,
   },
 ]
@@ -72,7 +72,7 @@ const authorItems = [
   },
   {
     title: "Settings",
-    href: "/author/settings",
+    href: "/settings",
     icon: Settings,
   },
 ]

@@ -133,3 +133,41 @@ def get_user_data():
         return jsonify({'error': 'Token expired'}), 401
     except jwt.InvalidTokenError:
         return jsonify({'error': 'Invalid token'}), 401
+
+@auth.route('/change-password', methods=['PUT'])
+def change_password():
+    
+    data = request.get_json()
+    
+    if 'current_password' not in data or 'new_password' not in data:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    token = request.headers.get('Authorization').split(' ')[0]
+    print(token)
+    try:
+        decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+        user_id = decoded.get('user_id')
+        
+        user = users_model.fetch_user_by_id(user_id)
+        
+        
+        hashed_password = users_model.fetch_password_hash(user['email'])
+        
+        if not check_password_hash(hashed_password['password_hash'], data['current_password']):
+            return jsonify({'error': 'Invalid password'}), 401
+        
+        new_hashed_password = generate_password_hash(data['new_password'])
+        users_model.update_password(user_id, new_hashed_password)
+        
+        return jsonify({'message': 'Password updated successfully'}), 200
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expired'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token'}), 401
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+    return jsonify({'message': 'Password updated successfully'}), 200
+    

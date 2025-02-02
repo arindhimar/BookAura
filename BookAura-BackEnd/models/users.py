@@ -72,6 +72,13 @@ class UsersModel:
         password_hash = cur.fetchone()
         cur.close()
         return password_hash
+
+    def update_password(self, user_id, password_hash):
+        cur = self.conn.cursor()
+        query = "UPDATE users SET password_hash = %s WHERE user_id = %s"
+        cur.execute(query, (password_hash, user_id))
+        self.conn.commit()
+        cur.close()
     
     def close_connection(self):
         self.conn.close()
