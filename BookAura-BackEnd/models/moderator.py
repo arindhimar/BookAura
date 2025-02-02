@@ -28,7 +28,7 @@ class ModeratorsModel:
 
     def create_moderator(self, user_id):
         cur = self.conn.cursor()
-        cur.execute('INSERT INTO moderators (user_id,is_flagged) VALUES (%s)', (user_id,FALSE))
+        cur.execute('INSERT INTO moderators (user_id) VALUES (%s)', (user_id,))
         self.conn.commit()
         cur.close()
 

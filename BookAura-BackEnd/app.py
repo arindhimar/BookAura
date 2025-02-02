@@ -10,6 +10,7 @@ from controllers.books_controller import app as books_app
 from controllers.auth_controller import auth
 from controllers.publisher_controller import app as publisher_app
 from controllers.author_controller import app as author_app
+from controllers.moderator_controller import app as moderator_app
 
 # Load environment variables from .env
 load_dotenv()
@@ -32,6 +33,7 @@ app.register_blueprint(books_app, url_prefix='/books')
 app.register_blueprint(auth, url_prefix='/auth')
 app.register_blueprint(publisher_app, url_prefix='/publishers')
 app.register_blueprint(author_app, url_prefix='/authors')
+app.register_blueprint(moderator_app, url_prefix='/moderators')
 
 
 # Main driver function to run the Flask app

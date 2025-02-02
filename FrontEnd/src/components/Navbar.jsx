@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Book, Menu, X, Sun, Moon } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
+import { GradientButton } from '../components/ui/GradientButton';
 
-export default function Navbar() {
+
+export default function Navbar({openLogin, openRegister}) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
@@ -58,15 +60,9 @@ export default function Navbar() {
                 </motion.div>
               </AnimatePresence>
             </motion.button>
-            <Link to="/signup">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition-colors"
-              >
-                Sign Up
-              </motion.button>
-            </Link>
+             <GradientButton onClick={openRegister}>
+                Get Started
+              </GradientButton>
           </div>
 
           <div className="md:hidden flex items-center space-x-4">

@@ -1,3 +1,4 @@
+import { title } from "process"
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
 import { LayoutDashboard, Users, FileText, Settings, BookOpen, DollarSign, Star, X ,Book} from "lucide-react"
@@ -15,6 +16,11 @@ const adminItems = [
     icon: Users,
   },
   {
+    title: "Manage Moderators",
+    href: "/admin/manage-moderators",
+    icon: Users,
+  },
+  {
     title: "Content Library",
     href: "/admin/content",
     icon: BookOpen,
@@ -22,6 +28,24 @@ const adminItems = [
   {
     title: "Agreements",
     href: "/admin/agreements",
+    icon: FileText,
+  },
+  {
+    title: "Settings",
+    href: "/settings",
+    icon: Settings,
+  },
+]
+
+const moderatorItems = [
+  {
+    title: "Dashboard",
+    href: "/moderator",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Pending Reviews",
+    href: "/moderator/pending-reviews",
     icon: FileText,
   },
   {
@@ -80,7 +104,7 @@ const authorItems = [
 export function SidebarNav({ isOpen, onClose, userRole }) {
   const location = useLocation()
 
-  const items = userRole === "admin" ? adminItems : userRole === "publisher" ? publisherItems : authorItems
+  const items = userRole === "admin" ? adminItems : userRole === "publisher" ? publisherItems : authorItems ? moderatorItems : authorItems
 
   return (
     <div

@@ -48,6 +48,7 @@ def token_required(f):
 def register():
     """Registers a new user."""
     data = request.get_json()
+    
     required_fields = {'username', 'email', 'password', 'role_id'}
 
     if not all(field in data for field in required_fields):
@@ -55,24 +56,25 @@ def register():
 
     username, email, password, role_id = data['username'], data['email'], data['password'], int(data['role_id'])
 
+    
     if not roles_model.is_valid_role(role_id):
         return jsonify({'error': 'Invalid role ID'}), 400
-
     if users_model.fetch_user_by_email(email):
         return jsonify({'error': 'Email is already registered'}), 400
 
     hashed_password = encode_password(password)
     user_id = users_model.create_user(username, email, hashed_password, role_id)
-
-    # Assign user to the correct role table
+    print(user_id)
     role_mapping = {
         1: platform_administrators_model.create_platform_administrator,
         2: publishers_model.create_publisher,
-        3: normal_users_model.create_normal_user,
-        4: moderators_model.create_moderator
+        4: normal_users_model.create_normal_user,
+        5: moderators_model.create_moderator
     }
     if role_id in role_mapping:
         role_mapping[role_id](user_id)
+    else:
+        return jsonify({'error': 'Invalid role ID'}),
 
     return jsonify({'message': 'User registered successfully', 'user_id': user_id}), 201
 

@@ -4,16 +4,19 @@ import { ThemeProvider } from "./contexts/ThemeContext"
 import { UserProvider, useUser } from "./contexts/UserContext"
 import LandingPage from "./pages/LandingPage"
 import DashboardLayout from "./components/layout/DashboardLayout"
-import Dashboard from "./pages/Dashboard"
-import PublisherDashboard from "./pages/PublisherDashboard"
-import AuthorDashboard from "./pages/AuthorDashboard"
-import ManagePublishers from "./pages/ManagePublishers"
-import Agreements from "./pages/Agreements"
+import Dashboard from "./pages/platform_administrator/Dashboard"
+import PublisherDashboard from "./pages/publisher/PublisherDashboard"
+import AuthorDashboard from "./pages/author/AuthorDashboard"
+import ManagePublishers from "./pages/platform_administrator/ManagePublishers"
+import Agreements from "./pages/platform_administrator/Agreements"
 import ManageBooks from "./pages/publisher/ManageBooks"
 import Analytics from "./pages/publisher/Analytics"
 import MyBooks from "./pages/author/MyBooks"
 import Reviews from "./pages/author/Reviews"
 import Settings from "./pages/Settings"
+import ManageModerators from "./pages/platform_administrator/ManageModerators"
+import ModeratorDashboard from "./pages/moderator/ModeratorDashboard"
+import ContentModerationChallenges from "./pages/moderator/ContentModerationChallenges"
 
 function AppRoutes() {
   const { user, setUser } = useUser()
@@ -45,6 +48,9 @@ function AppRoutes() {
               navigate("/publisher")
             } else if (data.user.role_id === 3) {
               navigate("/author")
+            }
+            else if (data.user.role_id === 5) {
+              navigate("/moderator")
             }
           }
         })
@@ -91,11 +97,44 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/admin/manage-moderators"
+        element={
+          <ProtectedRoute allowedRoles={[1]}>
+            <DashboardLayout userRole="admin">
+              <ManageModerators />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/agreements"
         element={
           <ProtectedRoute allowedRoles={[1]}>
             <DashboardLayout userRole="admin">
               <Agreements />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Moderator Routes */}
+      <Route
+        path="/moderator"
+        element={
+          <ProtectedRoute allowedRoles={[5]}>
+            <DashboardLayout userRole="moderator">
+              <ModeratorDashboard />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/moderator/pending-reviews"
+        element={
+          <ProtectedRoute allowedRoles={[5]}>
+            <DashboardLayout userRole="moderator">
+              <div>Pending Reviews</div>
+                <ContentModerationChallenges />
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -169,7 +208,7 @@ function AppRoutes() {
       <Route
         path="/settings"
         element={
-          <ProtectedRoute allowedRoles={[1, 2, 3]}>
+          <ProtectedRoute allowedRoles={[1, 2, 3,5]}>
             <DashboardLayout userRole={user?.role_id === 1 ? "admin" : user?.role_id === 2 ? "publisher" : "author"}>
               <Settings />
             </DashboardLayout>
