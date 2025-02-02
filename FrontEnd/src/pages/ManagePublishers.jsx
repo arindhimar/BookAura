@@ -32,7 +32,7 @@ export default function ManagePublishers() {
       const token = localStorage.getItem("token")
       const publishersResponse = await fetch(`${import.meta.env.VITE_BASE_API_URL}/publishers/`, {
         headers: {
-          Authorization: `${token}`,
+          Authorization: ` ${token}`,
         },
       })
       if (!publishersResponse.ok) {
@@ -44,7 +44,7 @@ export default function ManagePublishers() {
         publishersData.map(async (publisher) => {
           const userResponse = await fetch(`${import.meta.env.VITE_BASE_API_URL}/users/${publisher.user_id}`, {
             headers: {
-              Authorization: `${token}`,
+              Authorization: ` ${token}`,
             },
           })
           if (!userResponse.ok) {
@@ -100,9 +100,13 @@ export default function ManagePublishers() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: token,
+            Authorization: ` ${token}`,
           },
-          body: JSON.stringify({ ...data, password }),
+          body: JSON.stringify({
+            ...data,
+            password,
+            publisher_id: selectedPublisher.publisher_id, // Add this line
+          }),
         },
       )
       if (!response.ok) {

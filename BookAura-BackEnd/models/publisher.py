@@ -77,6 +77,15 @@ class PublishersModel:
         cur.execute('UPDATE publishers SET is_approved = 1 WHERE publisher_id = %s', (publisher_id,))
         self.conn.commit()
         cur.close()
+        
+    def is_approved(self, user_id):
+        cur = self.conn.cursor()
+        cur.execute('SELECT is_approved FROM publishers WHERE user_id = %s', (user_id,))
+        result = cur.fetchone()
+        cur.close()
+        if result:
+            return result[0]
+        return None
 
     def close_connection(self):
         self.conn.close()
