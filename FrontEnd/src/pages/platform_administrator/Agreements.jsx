@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react"
 import ReactQuill from "react-quill"
 import "react-quill/dist/quill.snow.css"
-import { Button } from "../components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog"
+import { Button } from "../../components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog"
 
 export default function Agreements() {
   const [agreements, setAgreements] = useState({
