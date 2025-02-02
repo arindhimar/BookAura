@@ -1,6 +1,6 @@
 from flask import request, jsonify, Blueprint
 from models.users import UsersModel
-from utils.auth_utils import decode_token,validate_password,encode_password
+from utils.auth_utils import decode_token,validate_password_by_user_id,encode_password
 
 
 
@@ -55,7 +55,7 @@ def update_user():
             
         # Verify password
         stored_hash = users_model.fetch_password_hash(old_user_data['email'])['password_hash']
-        if not validate_password(stored_hash, data['password']):
+        if validate_password_by_user_id(user_data['user_id'], data['password']) is False:
             return jsonify({'error': 'Invalid password'}), 401
 
         # Update user in the database
@@ -81,17 +81,3 @@ def delete_user(user_id):
     return jsonify({'message': 'User deleted successfully'}), 200
 
 
-@app.route('/tempWwala', methods=['POST'])
-def tempWwala():
-    data = request.get_json()
-    print(data)
-    if 'email' not in data or 'password' not in data:
-        return jsonify({'error': 'Missing required fields'}), 400
-    
-    email, password = data['email'], data['password']
-    
-    user = users_model.fetch_user_by_email(email)
-    
-    users_model.update_user(user['user_id'], user['username'], user['email'], encode_password("Dhimar@99") , user['role_id'])
-    
-    return jsonify({'message': 'User updated successfully'}), 200

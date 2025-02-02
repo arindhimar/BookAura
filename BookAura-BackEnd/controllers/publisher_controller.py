@@ -1,5 +1,6 @@
 from flask import request, jsonify, Blueprint
 from models.publisher import PublishersModel
+from utils.auth_utils import decode_token,validate_password_by_user_id
 
 
 
@@ -38,18 +39,26 @@ def delete_publisher(publisher_id):
 
 @app.route('/<int:publisher_id>/approve', methods=['POST'])
 def approve_publisher(publisher_id):
+    token = request.headers.get('Authorization').split(' ')[0]
     data = request.get_json()
-    if 'password' not in data:
-        return jsonify({'error': 'Missing required field: password'}), 400
     
-
-    password = data['password']
-    hashed_password = users_model.fetch_password_hash(user_data['email'])
+    try:
+        user_data = decode_token(token)
+        
+        if 'password' not in data or 'publisher_id' not in data:
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        
+        if validate_password_by_user_id(user_data['user_id'], data['password']) is False:
+            return jsonify({'error': 'Invalid password'}), 401
+        
+        publishers_model.approve_publisher(publisher_id)
+        
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 401
     
-    if not check_password_hash(hashed_password['password_hash'], password):
-        return jsonify({'error': 'Invalid password'}), 401
     
-    publishers_model.approve_publisher(publisher_id)
-    
+        
 
     return jsonify({'message': 'Publisher approved successfully'}), 200
