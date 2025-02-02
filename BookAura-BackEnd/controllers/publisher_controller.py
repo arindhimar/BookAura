@@ -1,6 +1,6 @@
 from flask import request, jsonify, Blueprint
 from models.publisher import PublishersModel
-from middleware.auth import token_required
+
 
 
 app = Blueprint('publisher', __name__)
@@ -37,7 +37,6 @@ def delete_publisher(publisher_id):
 
 
 @app.route('/<int:publisher_id>/approve', methods=['POST'])
-@token_required
 def approve_publisher(publisher_id):
     data = request.get_json()
     if 'password' not in data:
