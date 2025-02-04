@@ -26,17 +26,17 @@ class BooksModel:
         cur.close()
         return book
 
-    def create_book(self, author_id, title, description, content, is_public, is_approved):
+    def create_book(self, user_id, title,file_url ,description, is_public, is_approved):
         cur = self.conn.cursor()
-        cur.execute('INSERT INTO books (author_id, title, description, content, is_public, is_approved) VALUES (%s, %s, %s, %s, %s, %s)',
-                    (author_id, title, description, content, is_public, is_approved))
+        cur.execute('INSERT INTO books (user_id, title, description, fileUrl, is_public, is_approved) VALUES (%s, %s, %s, %s, %s, %s)',
+                    (user_id, title, description, file_url,is_public, is_approved))
         self.conn.commit()
         cur.close()
 
-    def update_book(self, book_id, title, description, content, is_public, is_approved):
+    def update_book(self, book_id,title, description, is_public, is_approved):
         cur = self.conn.cursor()
-        cur.execute('UPDATE books SET title = %s, description = %s, content = %s, is_public = %s, is_approved = %s WHERE book_id = %s',
-                    (title, description, content, is_public, is_approved, book_id))
+        cur.execute('UPDATE books SET title = %s, description = %s, is_public = %s, is_approved = %s WHERE book_id = %s',
+                    (title, description, is_public, is_approved, book_id))
         self.conn.commit()
         cur.close()
 

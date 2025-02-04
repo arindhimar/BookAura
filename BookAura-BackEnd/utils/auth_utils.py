@@ -1,6 +1,7 @@
 import jwt
 from flask import current_app
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from models.users import UsersModel
 import datetime
 
@@ -56,3 +57,7 @@ def validate_password_by_email(email, password):
 def encode_password(password):
     """Generates a hashed password."""
     return generate_password_hash(password)
+
+def secure_file_name(filename):
+    """Returns a secure version of the given filename."""
+    return secure_filename(filename) if filename else None

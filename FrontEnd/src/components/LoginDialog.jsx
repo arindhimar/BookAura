@@ -70,6 +70,8 @@ export default function LoginDialog({ isOpen, onClose, openRegister }) {
       case 3:
         navigate("/author");
         break;
+        case 5:
+          navigate("/moderator");
       default:
         navigate("/");
         break;

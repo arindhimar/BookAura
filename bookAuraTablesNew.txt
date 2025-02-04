@@ -55,16 +55,30 @@ CREATE TABLE normal_users (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
+
+CREATE TABLE categories(
+    category_id INT AUTO_INCREMENT PRIMARY KEY,
+    category_name VARCHAR(255)
+);
+
+CREATE TABLE book_category(
+    book_category_id INT AUTO_INCREMENT PRIMARY KEY,
+    category_id INT ,
+    book_id INT,
+    FOREIGN KEY (category_id) REFERENCES categories(category_id),
+    FOREIGN KEY (book_id) REFERENCES books(book_id)
+);
+
 CREATE TABLE books (
     book_id INT AUTO_INCREMENT PRIMARY KEY,
-    author_id INT NOT NULL,
+    user_id INT NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    content TEXT NOT NULL,
+    fileUrl TEXT NOT NULL,
     is_public BOOLEAN DEFAULT FALSE,
     is_approved BOOLEAN DEFAULT FALSE,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (author_id) REFERENCES authors(author_id)
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
 

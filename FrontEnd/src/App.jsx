@@ -17,6 +17,7 @@ import Settings from "./pages/Settings"
 import ManageModerators from "./pages/platform_administrator/ManageModerators"
 import ModeratorDashboard from "./pages/moderator/ModeratorDashboard"
 import ContentModerationChallenges from "./pages/moderator/ContentModerationChallenges"
+import ManageCategories from "./pages/platform_administrator/ManageCategories"
 
 function AppRoutes() {
   const { user, setUser } = useUser()
@@ -106,6 +107,16 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/manage-categories"
+        element={
+          <ProtectedRoute allowedRoles={[1]}>
+            <DashboardLayout userRole="admin">
+              <ManageCategories />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+        />
       <Route
         path="/admin/agreements"
         element={

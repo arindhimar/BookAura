@@ -21,8 +21,8 @@ const adminItems = [
     icon: Users,
   },
   {
-    title: "Content Library",
-    href: "/admin/content",
+    title: "Manage Categories",
+    href: "/admin/manage-categories",
     icon: BookOpen,
   },
   {
