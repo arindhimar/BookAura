@@ -49,6 +49,8 @@ def register():
     """Registers a new user."""
     data = request.get_json()
     
+    print(data)
+    
     required_fields = {'username', 'email', 'password', 'role_id'}
 
     if not all(field in data for field in required_fields):
