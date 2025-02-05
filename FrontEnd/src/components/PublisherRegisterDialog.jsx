@@ -7,7 +7,7 @@ import TermsAndConditionsDialog from "./TermsAndConditionsDialog"
 
 export default function PublisherRegisterDialog({ isOpen, onClose, openLogin }) {
   const [formData, setFormData] = useState({
-    companyName: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -37,7 +37,7 @@ export default function PublisherRegisterDialog({ isOpen, onClose, openLogin }) 
       const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, role_name:"Publisher  ",}),
+        body: JSON.stringify({ ...formData, role_id:"2",}),
       })
       const data = await response.json()
       if (response.ok) {
@@ -102,8 +102,8 @@ export default function PublisherRegisterDialog({ isOpen, onClose, openLogin }) 
                   <Building2 className="absolute top-3 left-3 text-gray-400" size={20} />
                   <input
                     type="text"
-                    name="companyName"
-                    value={formData.companyName}
+                    name="username"
+                    value={formData.username}
                     onChange={handleInputChange}
                     placeholder="Company Name"
                     required

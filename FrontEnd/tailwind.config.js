@@ -1,12 +1,18 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-	darkMode: 'class',
-	content: [
-	  './src/**/*.{js,jsx,ts,tsx}',
-	],
+	darkMode: ["class"],
+	content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}", "app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
 	theme: {
 	  extend: {
 		colors: {
+		  brown: {
+			50: "var(--color-brown-50)",
+			100: "var(--color-brown-100)",
+			200: "var(--color-brown-200)",
+			400: "var(--color-brown-400)",
+			600: "var(--color-brown-600)",
+			800: "var(--color-brown-800)",
+		  },
 		  border: "hsl(var(--border))",
 		  input: "hsl(var(--input))",
 		  ring: "hsl(var(--ring))",
