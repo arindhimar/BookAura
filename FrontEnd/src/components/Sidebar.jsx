@@ -1,10 +1,12 @@
-import { useState } from "react"
-import { Home, Library, ShoppingBag, MessageSquare, Menu, X } from "lucide-react"
-import PropTypes from "prop-types"
-import { motion, AnimatePresence } from "framer-motion"
+"use client"
 
-const Sidebar = ({ activeSection, onSectionChange }) => {
-  const [isOpen, setIsOpen] = useState(false)
+import { useState } from "react"
+import { Home, Library, ShoppingBag, MessageSquare } from "lucide-react"
+import { motion } from "framer-motion"
+
+export default function Sidebar() {
+  const [activeSection, setActiveSection] = useState("library")
+  const [hoveredItem, setHoveredItem] = useState(null)
 
   const menuItems = [
     { id: "home", icon: Home, label: "Home" },
@@ -14,125 +16,106 @@ const Sidebar = ({ activeSection, onSectionChange }) => {
   ]
 
   return (
-    <>
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
-      >
-        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-      </button>
+    <motion.div
+      className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-[#E5D5C5] flex flex-col"
+      initial={{ x: -64 }}
+      animate={{ x: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+    >
+      {/* Logo */}
+      <motion.div className="p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+        <img
+          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-1kq7NeghJEvU6r2Q9oT5XUfKm4MWvq.png"
+          alt="Readowl"
+          className="h-8"
+        />
+      </motion.div>
 
-      {/* Backdrop for mobile */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsOpen(false)}
-            className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
-          />
-        )}
-      </AnimatePresence>
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-6">
+        {menuItems.map((item, index) => {
+          const Icon = item.icon
+          const isHovered = hoveredItem === item.id
+          const isActive = activeSection === item.id
 
-      {/* Sidebar */}
+          return (
+            <motion.button
+              key={item.id}
+              onHoverStart={() => setHoveredItem(item.id)}
+              onHoverEnd={() => setHoveredItem(null)}
+              onClick={() => setActiveSection(item.id)}
+              className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg 
+                       text-left mb-1 transition-colors relative ${
+                         isActive ? "bg-[#F6F2EE] text-[#8B6E4F]" : "text-[#8B6E4F] hover:bg-[#F6F2EE]"
+                       }`}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ x: 4 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Icon className={`h-5 w-5 transition-transform ${isHovered ? "scale-110" : "scale-100"}`} />
+              <span className="text-sm font-medium">{item.label}</span>
+
+              {isActive && (
+                <motion.div
+                  layoutId="activeIndicator"
+                  className="absolute left-0 w-1 h-full bg-[#8B6E4F] rounded-r-full"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                />
+              )}
+            </motion.button>
+          )
+        })}
+      </nav>
+
+      {/* Continue reading section */}
       <motion.div
-        className={`fixed left-0 top-0 h-screen bg-[#FAF6F1] border-r 
-                  border-[#E5D5C5] flex flex-col z-50 w-64
-                  lg:translate-x-0 transition-transform duration-300
-                  ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
-        initial={false}
+        className="p-4 mx-4 mb-4 bg-[#F6F2EE] rounded-lg"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        whileHover={{ scale: 1.02 }}
       >
-        {/* Logo */}
-        <div className="p-6">
+        <h3 className="text-sm font-medium text-[#8B6E4F] mb-3">Continue reading</h3>
+        <motion.div className="relative aspect-[3/4] mb-3" whileHover={{ y: -4 }}>
           <img
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-1kq7NeghJEvU6r2Q9oT5XUfKm4MWvq.png"
-            alt="Readowl"
-            className="h-8"
+            src="https://images.unsplash.com/photo-1543002588-bfa74002ed7e"
+            alt="Current book"
+            className="w-full h-full object-cover rounded-lg shadow-sm"
           />
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-2">
-          {menuItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <motion.button
-                key={item.id}
-                onClick={() => {
-                  onSectionChange(item.id)
-                  setIsOpen(false) // Close sidebar on mobile after selection
-                }}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg 
-                         transition-all relative group ${
-                           activeSection === item.id
-                             ? "bg-[#E5D5C5] text-[#6D563D]"
-                             : "text-[#8B6E4F] hover:bg-[#E5D5C5]/50"
-                         }`}
-                whileHover={{ x: 4 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Icon className={`h-5 w-5 ${activeSection === item.id ? "text-[#6D563D]" : ""}`} />
-                <span className="font-medium">{item.label}</span>
-
-                {/* Active indicator */}
-                {activeSection === item.id && (
-                  <motion.div
-                    layoutId="activeIndicator"
-                    className="absolute left-0 w-1 h-full bg-[#6D563D] rounded-r-full"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  />
-                )}
-              </motion.button>
-            )
-          })}
-        </nav>
-
-        {/* Continue reading section */}
-        <div className="p-4 mx-4 mb-4 bg-white rounded-lg shadow-sm">
-          <h3 className="text-sm font-medium text-[#6D563D] mb-3">Continue reading</h3>
-          <div className="relative aspect-[3/4] mb-3">
-            <img
-              src="https://images.unsplash.com/photo-1543002588-bfa74002ed7e"
-              alt="Current book"
-              className="w-full h-full object-cover rounded-md shadow-md"
-            />
-          </div>
-          <div className="text-sm text-[#8B6E4F]">
-            <p className="font-medium">1984</p>
-            <p className="text-xs mt-1">Page 145 of 328</p>
-          </div>
-        </div>
-
-        {/* User Profile */}
-        <div className="p-4 border-t border-[#E5D5C5]">
-          <motion.div
-            className="flex items-center space-x-3 p-2 hover:bg-[#E5D5C5]/50 rounded-lg 
-                     transition-colors cursor-pointer"
-            whileHover={{ x: 4 }}
-          >
-            <img
-              src="/placeholder.svg?height=32&width=32"
-              alt="User"
-              className="w-8 h-8 rounded-full border border-[#E5D5C5]"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[#6D563D] truncate">Stephan</p>
-            </div>
-          </motion.div>
+        </motion.div>
+        <div className="text-sm text-[#8B6E4F]">
+          <p className="font-medium">Web Development</p>
+          <p className="text-xs mt-1">Page 145 of 328</p>
         </div>
       </motion.div>
-    </>
+
+      {/* User Profile */}
+      <motion.div
+        className="p-4 border-t border-[#E5D5C5]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+      >
+        <motion.div
+          className="flex items-center space-x-3 p-2 hover:bg-[#F6F2EE] rounded-lg 
+                   transition-colors cursor-pointer"
+          whileHover={{ x: 4, backgroundColor: "#F6F2EE" }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <motion.img
+            src="/placeholder.svg?height=32&width=32"
+            alt="User"
+            className="w-8 h-8 rounded-full"
+            whileHover={{ scale: 1.1 }}
+          />
+          <span className="text-sm font-medium text-[#8B6E4F]">Stephan</span>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   )
 }
-
-Sidebar.propTypes = {
-  activeSection: PropTypes.string.isRequired,
-  onSectionChange: PropTypes.func.isRequired,
-}
-
-export default Sidebar
 
