@@ -22,8 +22,7 @@ const TextToSpeech = () => {
         const availableVoices = EasySpeech.voices();
         setVoices(availableVoices);
 
-        // Set a default voice (first Marathi or Hindi voice found)
-        const defaultVoice =
+g        const defaultVoice =
           availableVoices.find((voice) => voice.lang === "mr-IN") ||
           availableVoices.find((voice) => voice.lang === "hi-IN") ||
           availableVoices.find((voice) => voice.lang === "en-US");
