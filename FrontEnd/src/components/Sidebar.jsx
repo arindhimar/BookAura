@@ -1,12 +1,14 @@
-"use client"
+"\"use client"
 
 import { useState } from "react"
-import { Home, Library, ShoppingBag, MessageSquare } from "lucide-react"
-import { motion } from "framer-motion"
+import { Home, Library, ShoppingBag, MessageSquare, Menu, X, ChevronDown } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Link } from "react-router-dom"
+import { Book } from "lucide-react"
 
 export default function Sidebar() {
+  const [isOpen, setIsOpen] = useState(false)
   const [activeSection, setActiveSection] = useState("library")
-  const [hoveredItem, setHoveredItem] = useState(null)
 
   const menuItems = [
     { id: "home", icon: Home, label: "Home" },
@@ -16,106 +18,137 @@ export default function Sidebar() {
   ]
 
   return (
-    <motion.div
-      className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-[#E5D5C5] flex flex-col"
-      initial={{ x: -64 }}
-      animate={{ x: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-    >
-      {/* Logo */}
-      <motion.div className="p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-        <img
-          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-1kq7NeghJEvU6r2Q9oT5XUfKm4MWvq.png"
-          alt="Readowl"
-          className="h-8"
-        />
-      </motion.div>
+    <>
+      {/* Mobile menu button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-50"
+        aria-label="Toggle menu"
+      >
+        {isOpen ? <X className="h-5 w-5 text-[#6D563D]" /> : <Menu className="h-5 w-5 text-[#6D563D]" />}
+      </button>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-6">
-        {menuItems.map((item, index) => {
-          const Icon = item.icon
-          const isHovered = hoveredItem === item.id
-          const isActive = activeSection === item.id
+      {/* Backdrop for mobile */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsOpen(false)}
+            className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+          />
+        )}
+      </AnimatePresence>
 
-          return (
+      {/* Sidebar */}
+      <motion.aside
+        className={`fixed left-0 top-0 h-screen w-[280px] bg-gray-50 z-50 
+                   lg:translate-x-0 transition-transform duration-300 ease-in-out
+                   border-r border-gray-200 flex flex-col
+                   ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+        initial={false}
+      >
+        {/* Logo section */}
+        <div className=" ml-10 px-4 py-5 flex items-center">
+          {/* <img
+            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-1kq7NeghJEvU6r2Q9oT5XUfKm4MWvq.png"
+            alt="Readowl"
+            className="h-8"
+          /> */}
+          <motion.div
+            whileHover={{ rotate: 20 }}
+            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+          >
+            <Book className="h-8 w-8 text-blue-500" />
+          </motion.div>
+          <span className="text-2xl font-bold text-gray-800 dark:text-white">
+            BookAura
+          </span>
+
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-6 overflow-y-auto">
+          {menuItems.map((item) => (
             <motion.button
               key={item.id}
-              onHoverStart={() => setHoveredItem(item.id)}
-              onHoverEnd={() => setHoveredItem(null)}
-              onClick={() => setActiveSection(item.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg 
-                       text-left mb-1 transition-colors relative ${
-                         isActive ? "bg-[#F6F2EE] text-[#8B6E4F]" : "text-[#8B6E4F] hover:bg-[#F6F2EE]"
-                       }`}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
+              onClick={() => {
+                setActiveSection(item.id)
+                setIsOpen(false)
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl 
+                       transition-all relative group mb-1
+                       ${activeSection === item.id ? "bg-indigo-100 text-indigo-700" : "text-gray-600 hover:bg-gray-100"
+                }`}
               whileHover={{ x: 4 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Icon className={`h-5 w-5 transition-transform ${isHovered ? "scale-110" : "scale-100"}`} />
-              <span className="text-sm font-medium">{item.label}</span>
-
-              {isActive && (
+              <item.icon className={`h-5 w-5 ${activeSection === item.id ? "text-indigo-700" : ""}`} />
+              <span className="font-medium">{item.label}</span>
+              {activeSection === item.id && (
                 <motion.div
                   layoutId="activeIndicator"
-                  className="absolute left-0 w-1 h-full bg-[#8B6E4F] rounded-r-full"
+                  className="absolute left-0 top-0 w-1 h-full bg-indigo-600 rounded-r-full"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 />
               )}
             </motion.button>
-          )
-        })}
-      </nav>
+          ))}
+        </nav>
 
-      {/* Continue reading section */}
-      <motion.div
-        className="p-4 mx-4 mb-4 bg-[#F6F2EE] rounded-lg"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        whileHover={{ scale: 1.02 }}
-      >
-        <h3 className="text-sm font-medium text-[#8B6E4F] mb-3">Continue reading</h3>
-        <motion.div className="relative aspect-[3/4] mb-3" whileHover={{ y: -4 }}>
-          <img
-            src="https://images.unsplash.com/photo-1543002588-bfa74002ed7e"
-            alt="Current book"
-            className="w-full h-full object-cover rounded-lg shadow-sm"
-          />
-        </motion.div>
-        <div className="text-sm text-[#8B6E4F]">
-          <p className="font-medium">Web Development</p>
-          <p className="text-xs mt-1">Page 145 of 328</p>
+        {/* Continue reading section */}
+        <div className="px-4 pb-4">
+          <motion.div
+            className="p-4 bg-white rounded-xl shadow-sm border border-gray-200"
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Continue reading</h3>
+            <div className="relative aspect-[3/4] mb-3 rounded-lg overflow-hidden">
+              <img
+                src="https://images.unsplash.com/photo-1543002588-bfa74002ed7e"
+                alt="Current book"
+                className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-700">Web Development</p>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>Page 145 of 328</span>
+                <span>44% complete</span>
+              </div>
+              <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-indigo-600 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: "44%" }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                />
+              </div>
+            </div>
+          </motion.div>
         </div>
-      </motion.div>
 
-      {/* User Profile */}
-      <motion.div
-        className="p-4 border-t border-[#E5D5C5]"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-      >
-        <motion.div
-          className="flex items-center space-x-3 p-2 hover:bg-[#F6F2EE] rounded-lg 
-                   transition-colors cursor-pointer"
-          whileHover={{ x: 4, backgroundColor: "#F6F2EE" }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <motion.img
-            src="/placeholder.svg?height=32&width=32"
-            alt="User"
-            className="w-8 h-8 rounded-full"
-            whileHover={{ scale: 1.1 }}
-          />
-          <span className="text-sm font-medium text-[#8B6E4F]">Stephan</span>
-        </motion.div>
-      </motion.div>
-    </motion.div>
+        {/* User Profile */}
+        <div className="p-4 border-t border-gray-200">
+          <motion.button
+            className="flex items-center w-full p-2 rounded-xl hover:bg-gray-100 transition-colors"
+            whileHover={{ x: 4 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <img src="/placeholder.svg?height=32&width=32" alt="User avatar" className="w-8 h-8 rounded-full" />
+            <div className="ml-3 flex-1 text-left">
+              <p className="text-sm font-medium text-gray-700">Stephan</p>
+              <p className="text-xs text-gray-500">Free Plan</p>
+            </div>
+            <ChevronDown className="w-4 h-4 text-gray-500" />
+          </motion.button>
+        </div>
+      </motion.aside>
+    </>
   )
 }
 

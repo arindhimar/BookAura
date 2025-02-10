@@ -25,6 +25,13 @@ class BooksModel:
         book = cur.fetchone()
         cur.close()
         return book
+    
+    def fetch_public_books(self):
+        cur = self.conn.cursor()
+        cur.execute('SELECT * FROM books WHERE is_public = 1')
+        books = cur.fetchall()
+        cur.close()
+        return books
 
     def create_book(self, user_id, title,file_url ,description, is_public, is_approved):
         cur = self.conn.cursor()

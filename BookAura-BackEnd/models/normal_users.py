@@ -26,7 +26,7 @@ class NormalUsersModel:
         cur.close()
         return normal_user
 
-    def create_normal_user(self, user_id, additional_info):
+    def create_normal_user(self, user_id, additional_info=""):
         cur = self.conn.cursor()
         cur.execute('INSERT INTO normal_users (user_id, additional_info) VALUES (%s, %s)', (user_id, additional_info))
         self.conn.commit()
