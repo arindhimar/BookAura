@@ -63,7 +63,7 @@ const publisherItems = [
   },
   {
     title: "Manage Books",
-    href: "/publisher/books",
+    href: "/publisher/manage-books",
     icon: BookOpen,
   },
   {

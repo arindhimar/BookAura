@@ -13,7 +13,9 @@ def get_all_authors():
 
 @app.route('/<int:author_id>', methods=['GET'])
 def get_author(author_id):
+    
     row = authors_model.fetch_author_by_id(author_id)
+    print(row)
     if row is None:
         return jsonify({'error': 'author not found'}), 404
     author = {'author_id': row[0], 'user_id': row[1], 'is_flagged': row[2], 'is_approved': row[3]}

@@ -23,7 +23,8 @@ def upload_file(file):
 @app.route('/', methods=['GET'])
 def get_all_books():
     rows = books_model.fetch_all_books()
-    books = [{'book_id': row[0], 'author_id': row[1], 'title': row[2], 'description': row[3]} for row in rows]
+    
+    books = [{'book_id': row[0], 'author_id': row[1], 'title': row[2], 'description': row[3],'uploaded_by_role':row[8]} for row in rows]
     return jsonify(books)
 
 @app.route('/<int:book_id>', methods=['GET'])
@@ -31,8 +32,22 @@ def get_book(book_id):
     row = books_model.fetch_book_by_id(book_id)
     if row is None:
         return jsonify({'error': 'Book not found'}), 404
-    book = {'book_id': row[0], 'author_id': row[1], 'title': row[2], 'description': row[3]}
+
+    book = {
+        'book_id': row[0],
+        'author_id': row[1],
+        'title': row[2],
+        'description': row[3],
+        'file_url': row[4],
+        'is_public': row[5],
+        'is_approved': row[6],
+        'uploaded_at': row[7],
+        'uploaded_by_role': row[8],
+        'categories': row[9].split(', ') if row[9] else []  # Convert string to list
+    }
+
     return jsonify(book)
+
 
 @app.route('/', methods=['POST'])
 def create_book():
@@ -53,7 +68,7 @@ def create_book():
     if not decoded_token:
         return jsonify({'error': 'Invalid token'}), 401
     
-    
+    print(data)    
     try:
         required_fields = ['title', 'description', 'is_public']
         for field in required_fields:
@@ -72,7 +87,7 @@ def create_book():
     is_public = data['is_public'].lower() == 'true' 
 
 
-    
+    uploaded_by_role = data['uploaded_by_role']
 
     # Insert into the database
     books_model.create_book(
@@ -81,7 +96,9 @@ def create_book():
         description=data['description'],
         file_url=file_url,  
         is_public=is_public,
-        is_approved="0"
+        is_approved="0",
+        uploaded_by_role=uploaded_by_role,
+        category_ids=data['category_ids']
     )
 
     return jsonify({'message': 'Book created successfully', 'file_url': file_url}), 201
@@ -89,6 +106,7 @@ def create_book():
 @app.route('/<int:book_id>', methods=['PUT'])
 def update_book(book_id):
     data = request.get_json()
+    
     if books_model.fetch_book_by_id(book_id) is None:
         return jsonify({'error': 'Book not found'}), 404
     books_model.update_book(book_id, data['title'], data['description'], data['content'], data['is_public'], data['is_approved'])
@@ -100,3 +118,16 @@ def delete_book(book_id):
         return jsonify({'error': 'Book not found'}), 404
     books_model.delete_book(book_id)
     return jsonify({'message': 'Book deleted successfully'}), 200
+
+@app.route('/recommendations', methods=['POST']) 
+def get_recommendations():
+    data = request.get_json()
+
+    if 'user_id' not in data or 'categories' not in data:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    user_id = data['user_id']
+    categories = data['categories']  
+
+    recommendations = books_model.get_recommendations(user_id, categories)
+    return jsonify(recommendations)

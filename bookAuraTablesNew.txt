@@ -77,10 +77,10 @@ CREATE TABLE books (
     fileUrl TEXT NOT NULL,
     is_public BOOLEAN DEFAULT FALSE,
     is_approved BOOLEAN DEFAULT FALSE,
+    uploaded_by_role ENUM('Author', 'Publisher') NOT NULL,  
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
-
 
 CREATE TABLE bookmarks (
     bookmark_id INT AUTO_INCREMENT PRIMARY KEY,

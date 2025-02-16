@@ -21,6 +21,7 @@ export default function ManageBooks() {
     category_ids: [],
     is_public: false,
     file: null,
+    uploaded_by_role:"Publisher"
   })
   const [editingBook, setEditingBook] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -93,7 +94,8 @@ export default function ManageBooks() {
       }
       await fetchBooks()
       setIsAddBookOpen(false)
-      setNewBook({ title: "", description: "", category_ids: [], is_public: false, file: null })
+    uploaded_by_role:"Publisher"
+      setNewBook({ title: "", description: "", category_ids: [], is_public: false, file: null, uploaded_by_role:"Publisher" })
       toast.success("Book added successfully")
     } catch (error) {
       toast.error(error.message)
