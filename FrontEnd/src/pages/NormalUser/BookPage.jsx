@@ -1,5 +1,7 @@
-import { useParams } from "react-router-dom"
+"use client"
+
 import { useState, useEffect } from "react"
+import { useParams, Link } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ArrowLeft,
@@ -15,86 +17,82 @@ import {
   Globe,
   Building,
 } from "lucide-react"
-import { Link } from "react-router-dom"
+import RecommendationList from "../../components/RecommendationList"
+import FullPageReader from "../../components/FullPageReader"
 
-const getBook = async (id) => {
-  // In a real application, you would fetch the book data from an API
-  // For this example, we'll return enhanced mock data matching the provided format
-  const mockBook = {
-    book_id: id,
-    author_id: 2,
-    title: "The Great Gatsby",
-    description:
-      "Set in the Jazz Age on Long Island, the novel depicts narrator Nick Carraway's interactions with mysterious millionaire Jay Gatsby and Gatsby's obsession to reunite with his former lover, Daisy Buchanan.",
-    author: "F. Scott Fitzgerald",
-    coverUrl: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e",
-    publishedDate: "April 10, 1925",
-    pages: 218,
-    genre: "Classic Literature",
-    language: "English",
-    publisher: "Charles Scribner's Sons",
-    isbn: "9780743273565",
-    rating: 4.5,
-    readTime: "6 hours",
-    totalReads: 1000000,
-    reviews: [
-      { user: "John Doe", comment: "A timeless classic that never fails to captivate.", rating: 5 },
-      { user: "Jane Smith", comment: "Fitzgerald's prose is simply mesmerizing.", rating: 4 },
-      { user: "Bob Johnson", comment: "A must-read for any literature enthusiast.", rating: 5 },
-    ],
-    similarBooks: [
-      {
-        book_id: "2",
-        title: "To Kill a Mockingbird",
-        author: "Harper Lee",
-        coverUrl: "https://images.unsplash.com/photo-1541963463532-d68292c34b19",
-      },
-      {
-        book_id: "3",
-        title: "1984",
-        author: "George Orwell",
-        coverUrl: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c",
-      },
-      {
-        book_id: "4",
-        title: "1984",
-        author: "George Orwell",
-        coverUrl: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c",
-      },
-    ],
-  }
-
-  return mockBook
-}
-
-const BookPage = () => {
+export default function BookPage() {
   const { id } = useParams()
   const [book, setBook] = useState(null)
+  const [author, setAuthor] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isLiked, setIsLiked] = useState(false)
   const [showFullDescription, setShowFullDescription] = useState(false)
+  const [recommendations, setRecommendations] = useState([])
+  const [isReaderOpen, setIsReaderOpen] = useState(false)
+  const [pdfUrl, setPdfUrl] = useState(null)
 
   useEffect(() => {
-    const fetchBook = async () => {
+    console.log(id)
+    const fetchBookAndAuthor = async () => {
       try {
-        console.log("Extracted Book ID from URL:", id)
-        const bookData = await getBook(id)
-        console.log("Received Book Data:", bookData)
+        const bookResponse = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/${id}`)
+        if (!bookResponse.ok) {
+          throw new Error("Failed to fetch book details")
+        }
+        const bookData = await bookResponse.json()
         setBook(bookData)
+
+        if (bookData.author_id) {
+          const authorResponse = await fetch(`${import.meta.env.VITE_BASE_API_URL}/users/${bookData.author_id}`)
+          if (!authorResponse.ok) {
+            throw new Error("Failed to fetch author details")
+          }
+          const authorData = await authorResponse.json()
+          setAuthor(authorData)
+        }
+
+        // Fetching recommendations
+        const recommendationsResponse = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/recommendations`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ user_id: bookData.author_id, categories: bookData.categories }),
+        })
+
+        if (!recommendationsResponse.ok) {
+          throw new Error("Failed to fetch recommendations")
+        }
+        const recommendationsData = await recommendationsResponse.json()
+        setRecommendations(recommendationsData)
       } catch (err) {
-        setError("Failed to fetch book details")
+        setError(err.message)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchBook()
+    fetchBookAndAuthor()
   }, [id])
 
-  if (loading)
+  const handleReadNow = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/${id}/pdf`)
+      if (!response.ok) {
+        throw new Error("Failed to fetch PDF")
+      }
+      const pdfData = await response.json()
+      setPdfUrl(pdfData.url)
+      setIsReaderOpen(true)
+    } catch (err) {
+      console.error("Error fetching PDF:", err)
+    }
+  }
+
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
         <motion.div
           className="w-16 h-16 border-t-4 border-indigo-500 border-solid rounded-full animate-spin"
           initial={{ opacity: 0 }}
@@ -103,6 +101,8 @@ const BookPage = () => {
         />
       </div>
     )
+  }
+
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>
   if (!book) return <div className="min-h-screen flex items-center justify-center">Book not found</div>
 
@@ -112,12 +112,12 @@ const BookPage = () => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8"
+      className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-8 px-4 sm:px-6 lg:px-8"
     >
       <div className="max-w-6xl mx-auto">
         <Link
-          to="/"
-          className="inline-flex items-center text-sm text-gray-600 hover:text-indigo-600 mb-6 transition-colors"
+          to="/home"
+          className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 mb-6 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Library
@@ -127,10 +127,10 @@ const BookPage = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-white rounded-xl shadow-lg overflow-hidden"
+          className="bg-white rounded-2xl shadow-xl overflow-hidden"
         >
           <div className="md:flex">
-            <div className="md:flex-shrink-0 p-6 bg-[#f0e7db]">
+            <div className="md:flex-shrink-0 p-6 bg-gradient-to-br from-indigo-100 to-purple-100">
               <motion.div
                 className="relative aspect-[2/3] w-[200px] mx-auto md:w-[300px]"
                 style={{
@@ -146,7 +146,7 @@ const BookPage = () => {
               >
                 <img
                   className="w-full h-full object-cover rounded-lg shadow-md"
-                  src={book.coverUrl || "/placeholder.svg"}
+                  src={book.coverPageUrl || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e"}
                   alt={book.title}
                 />
                 <div className="absolute inset-y-0 left-0 w-[4px] bg-gray-300 rounded-l-lg transform -translate-x-[2px]" />
@@ -163,15 +163,20 @@ const BookPage = () => {
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
-                    className="uppercase tracking-wide text-sm text-indigo-500 font-semibold"
+                    className="uppercase tracking-wide text-sm text-indigo-600 font-semibold"
                   >
-                    {book.genre}
+                    {book.categories &&
+                      book.categories.map((category, index) => (
+                        <span key={index} className="mr-2">
+                          {category}
+                        </span>
+                      ))}
                   </motion.div>
                   <motion.h1
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.5, delay: 0.4 }}
-                    className="mt-2 text-3xl font-bold text-gray-900"
+                    className="mt-2 text-4xl font-bold text-gray-900"
                   >
                     {book.title}
                   </motion.h1>
@@ -181,7 +186,7 @@ const BookPage = () => {
                     transition={{ duration: 0.5, delay: 0.5 }}
                     className="mt-2 text-xl text-gray-600"
                   >
-                    by {book.author}
+                    by {author ? author.username : "Unknown Author"}
                   </motion.p>
                 </div>
                 <motion.div
@@ -193,10 +198,10 @@ const BookPage = () => {
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-5 w-5 ${i < Math.floor(book.rating) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+                      className={`h-5 w-5 ${i < Math.floor(book.rating || 0) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
                     />
                   ))}
-                  <span className="ml-2 text-gray-600">{book.rating}</span>
+                  <span className="ml-2 text-gray-600">{book.rating || "Not rated"}</span>
                 </motion.div>
               </div>
               <motion.div
@@ -205,35 +210,45 @@ const BookPage = () => {
                 transition={{ duration: 0.5, delay: 0.7 }}
                 className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-500"
               >
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 mr-1" />
-                  {book.readTime}
-                </div>
-                <div className="flex items-center">
-                  <BookMarked className="h-4 w-4 mr-1" />
-                  {book.pages} pages
-                </div>
-                <div className="flex items-center">
-                  <Users className="h-4 w-4 mr-1" />
-                  {book.totalReads.toLocaleString()} reads
-                </div>
-                <div className="flex items-center">
-                  <Globe className="h-4 w-4 mr-1" />
-                  {book.language}
-                </div>
-                <div className="flex items-center">
-                  <Building className="h-4 w-4 mr-1" />
-                  {book.publisher}
-                </div>
+                {book.readTime && (
+                  <div className="flex items-center">
+                    <Clock className="h-4 w-4 mr-1" />
+                    {book.readTime}
+                  </div>
+                )}
+                {book.pages && (
+                  <div className="flex items-center">
+                    <BookMarked className="h-4 w-4 mr-1" />
+                    {book.pages} pages
+                  </div>
+                )}
+                {book.totalReads && (
+                  <div className="flex items-center">
+                    <Users className="h-4 w-4 mr-1" />
+                    {book.totalReads.toLocaleString()} reads
+                  </div>
+                )}
+                {book.language && (
+                  <div className="flex items-center">
+                    <Globe className="h-4 w-4 mr-1" />
+                    {book.language}
+                  </div>
+                )}
+                {book.publisher && (
+                  <div className="flex items-center">
+                    <Building className="h-4 w-4 mr-1" />
+                    {book.publisher}
+                  </div>
+                )}
               </motion.div>
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.8 }}
-                className="mt-4"
+                className="mt-4 relative"
               >
-                <p className={`text-gray-500 leading-relaxed ${showFullDescription ? "" : "line-clamp-3"}`}>
-                  {book.description}
+                <p className={`text-gray-600 leading-relaxed ${showFullDescription ? "" : "line-clamp-3"}`}>
+                  {book.description || "No description available."}
                 </p>
                 <AnimatePresence>
                   {!showFullDescription && (
@@ -264,18 +279,23 @@ const BookPage = () => {
                 className="mt-6 flex items-center justify-between"
               >
                 <div>
-                  <p className="text-sm text-gray-600">
-                    Published: <span className="font-medium">{book.publishedDate}</span>
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    ISBN: <span className="font-medium">{book.isbn}</span>
-                  </p>
+                  {book.publishedDate && (
+                    <p className="text-sm text-gray-600">
+                      Published: <span className="font-medium">{book.publishedDate}</span>
+                    </p>
+                  )}
+                  {book.isbn && (
+                    <p className="text-sm text-gray-600">
+                      ISBN: <span className="font-medium">{book.isbn}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="flex space-x-4">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center"
+                    className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full flex items-center shadow-lg"
+                    onClick={handleReadNow}
                   >
                     <BookOpen className="h-5 w-5 mr-2" />
                     Start Reading
@@ -283,7 +303,7 @@ const BookPage = () => {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg flex items-center"
+                    className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-full flex items-center shadow-lg"
                   >
                     <Headphones className="h-5 w-5 mr-2" />
                     Listen
@@ -307,73 +327,66 @@ const BookPage = () => {
               </motion.div>
             </div>
           </div>
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 1 }}
-            className="px-8 py-6 bg-gray-50"
-          >
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Reviews</h2>
-            <div className="space-y-4">
-              {book.reviews.map((review, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 1 + index * 0.1 }}
-                  className="bg-white p-4 rounded-lg shadow"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-gray-900">{review.user}</p>
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 ${i < review.rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}
-                        />
-                      ))}
+          {book.reviews && book.reviews.length > 0 && (
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.5, delay: 1 }}
+              className="px-8 py-6 bg-gradient-to-r from-indigo-50 to-purple-50"
+            >
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">Reviews</h2>
+              <div className="space-y-4">
+                {book.reviews.map((review, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 1 + index * 0.1 }}
+                    className="bg-white p-4 rounded-xl shadow-md"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-gray-900">{review.user}</p>
+                      <div className="flex">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${i < review.rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <p className="mt-2 text-gray-600">{review.comment}</p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 1.2 }}
-            className="px-8 py-6"
-          >
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Similar Books</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {book.similarBooks.map((similarBook, index) => (
-                <motion.div
-                  key={similarBook.book_id}
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 1.3 + index * 0.1 }}
-                >
-                  <Link to={`/book/${similarBook.book_id}`} className="group">
-                    <div className="aspect-w-2 aspect-h-3 rounded-lg overflow-hidden">
-                      <img
-                        src={similarBook.coverUrl || "/placeholder.svg"}
-                        alt={similarBook.title}
-                        className="object-cover transition-transform group-hover:scale-105"
-                      />
-                    </div>
-                    <p className="mt-2 text-sm font-medium text-gray-900">{similarBook.title}</p>
-                    <p className="text-sm text-gray-500">{similarBook.author}</p>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+                    <p className="mt-2 text-gray-600">{review.comment}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </motion.div>
+
+        {/* Recommendations */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 1.2 }}
+          className="mt-12"
+        >
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Recommended for You</h2>
+          <RecommendationList recommendations={recommendations} />
+        </motion.div>
+
+        {/* Full Page Reader */}
+        <AnimatePresence>
+          {isReaderOpen && (
+            <FullPageReader
+              bookUrl={pdfUrl}
+              onClose={() => setIsReaderOpen(false)}
+              title={book.title}
+              author={author ? author.username : "Unknown Author"}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   )
 }
-
-export default BookPage
 

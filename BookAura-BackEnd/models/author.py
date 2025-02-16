@@ -21,8 +21,10 @@ class AuthorsModel:
         return authors
     
     def fetch_author_by_id(self,author_id):
+        
         cur=self.conn.cursor(dictionary=True)
-        cur.execute('SELECT * FROM authors WHERE author_id=%s',(author_id))
+        # print('SELECT * FROM authors WHERE author_id='+str(author_id)+'')
+        cur.execute('SELECT * FROM authors WHERE author_id='+str(author_id)+'')
         author=cur.fetchone()
         cur.close()
         return author  

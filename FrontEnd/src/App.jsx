@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom"
 import { ThemeProvider } from "./contexts/ThemeContext"
 import { UserProvider, useUser } from "./contexts/UserContext"
@@ -18,6 +18,9 @@ import ManageModerators from "./pages/platform_administrator/ManageModerators"
 import ModeratorDashboard from "./pages/moderator/ModeratorDashboard"
 import ContentModerationChallenges from "./pages/moderator/ContentModerationChallenges"
 import ManageCategories from "./pages/platform_administrator/ManageCategories"
+import Home from "./pages/NormalUser/Home"
+import BookPage from "./pages/NormalUser/BookPage"
+import "react-toastify/dist/ReactToastify.css"
 
 function AppRoutes() {
   const { user, setUser } = useUser()
@@ -27,7 +30,6 @@ function AppRoutes() {
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (token) {
-      // Send a request to the backend to validate the token and get user data
       fetch(`${import.meta.env.VITE_BASE_API_URL}/auth/me`, {
         headers: {
           Authorization: token,
@@ -41,7 +43,6 @@ function AppRoutes() {
         })
         .then((data) => {
           setUser(data.user)
-          // Only navigate if we're on the root path
           if (location.pathname === "/") {
             if (data.user.role_id === 1) {
               navigate("/admin")
@@ -49,8 +50,9 @@ function AppRoutes() {
               navigate("/publisher")
             } else if (data.user.role_id === 3) {
               navigate("/author")
-            }
-            else if (data.user.role_id === 5) {
+            } else if (data.user.role_id === 4) {
+              navigate("/home")
+            } else if (data.user.role_id === 5) {
               navigate("/moderator")
             }
           }
@@ -64,7 +66,7 @@ function AppRoutes() {
 
   const ProtectedRoute = ({ children, allowedRoles }) => {
     if (user === null) {
-      return <div>Loading...</div> // Or a more sophisticated loading component
+      return <div>Loading...</div>
     }
     if (!allowedRoles.includes(user.role_id)) {
       return <Navigate to="/" replace />
@@ -76,6 +78,24 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
 
+      {/* Normal User Routes */}
+      <Route
+        path="/home"
+        element={
+          <ProtectedRoute allowedRoles={[4]}>
+            <Home />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/book/:id"
+        element={
+          <ProtectedRoute allowedRoles={[4]}>
+            <BookPage />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Admin Routes */}
       <Route
         path="/admin"
@@ -83,6 +103,16 @@ function AppRoutes() {
           <ProtectedRoute allowedRoles={[1]}>
             <DashboardLayout userRole="admin">
               <Dashboard />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/manage-categories"
+        element={
+          <ProtectedRoute allowedRoles={[1]}>
+            <DashboardLayout userRole="admin">
+              <ManageCategories />
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -98,31 +128,21 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/admin/manage-moderators"
-        element={
-          <ProtectedRoute allowedRoles={[1]}>
-            <DashboardLayout userRole="admin">
-              <ManageModerators />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/manage-categories"
-        element={
-          <ProtectedRoute allowedRoles={[1]}>
-            <DashboardLayout userRole="admin">
-              <ManageCategories />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-        />
-      <Route
         path="/admin/agreements"
         element={
           <ProtectedRoute allowedRoles={[1]}>
             <DashboardLayout userRole="admin">
               <Agreements />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/manage-moderators"
+        element={
+          <ProtectedRoute allowedRoles={[1]}>
+            <DashboardLayout userRole="admin">
+              <ManageModerators />
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -140,12 +160,21 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/moderator/pending-reviews"
+        path="/moderator/content-moderation"
         element={
           <ProtectedRoute allowedRoles={[5]}>
             <DashboardLayout userRole="moderator">
-              <div>Pending Reviews</div>
-                <ContentModerationChallenges />
+              <ContentModerationChallenges />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/moderator/settings"
+        element={
+          <ProtectedRoute allowedRoles={[5]}>
+            <DashboardLayout userRole="moderator">
+              <Settings/>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -163,7 +192,7 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/publisher/books"
+        path="/publisher/manage-books"
         element={
           <ProtectedRoute allowedRoles={[2]}>
             <DashboardLayout userRole="publisher">
@@ -195,7 +224,7 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/author/books"
+        path="/author/my-books"
         element={
           <ProtectedRoute allowedRoles={[3]}>
             <DashboardLayout userRole="author">
@@ -219,7 +248,7 @@ function AppRoutes() {
       <Route
         path="/settings"
         element={
-          <ProtectedRoute allowedRoles={[1, 2, 3,5]}>
+          <ProtectedRoute allowedRoles={[1, 2, 3, 4, 5]}>
             <DashboardLayout userRole={user?.role_id === 1 ? "admin" : user?.role_id === 2 ? "publisher" : "author"}>
               <Settings />
             </DashboardLayout>

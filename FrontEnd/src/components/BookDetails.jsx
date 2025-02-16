@@ -1,12 +1,14 @@
-"use client"
-
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { ArrowLeft, BookOpen, Heart, Share2 } from "lucide-react"
 import { Link } from "react-router-dom"
 
 const BookDetails = ({ book }) => {
   const [isLiked, setIsLiked] = useState(false)
+
+  useEffect(() => {
+    console.log("BookId : ", book)
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">

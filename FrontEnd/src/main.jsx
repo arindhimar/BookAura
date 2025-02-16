@@ -11,13 +11,13 @@ import Home from './pages/NormalUser/Home'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {/* <App /> */}
+    <App />
     {/* <Home /> */}
-    <Router>
+    {/* <Router>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/book/:bookId" element={<BookDetails />} />
       </Routes>
-    </Router>
+    </Router> */}
   </StrictMode>,
 )

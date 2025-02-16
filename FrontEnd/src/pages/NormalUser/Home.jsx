@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { Search, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -20,31 +18,27 @@ export default function Home() {
 
   useEffect(() => {
     const fetchBooks = async () => {
-      setIsLoading(true);
-      setError(null);
+      setIsLoading(true)
+      setError(null)
       try {
-        const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/`);
-        if (!response.ok) throw new Error("Failed to fetch books");
-  
-        const data = await response.json();
-        console.log("Fetched Books:", data); // Check what’s actually fetched
-  
-        setBooks({currentlyReading : data,nextUp:data,finished:data});  // Assuming API already returns the correct structure
-        console.log("Updated State:", books); // Check if books updates
+        const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/`)
+        if (!response.ok) throw new Error("Failed to fetch books")
+
+        const data = await response.json()
+        console.log(data)
+        setBooks({ currentlyReading: data, nextUp: data, finished: data })
       } catch (err) {
-        setError(err.message);
+        setError(err.message)
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
-  
-    fetchBooks();
-  }, []);
-  
-  
+    }
+
+    fetchBooks()
+  }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <Sidebar />
 
       <main className="lg:pl-[280px] min-h-screen transition-all duration-300">
@@ -54,50 +48,34 @@ export default function Home() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               {/* Tabs */}
               <motion.div
-                className="flex bg-white rounded-xl shadow-sm p-1"
+                className="flex bg-white rounded-full shadow-lg p-1"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
                 <AnimatePresence mode="wait">
-                  <motion.button
-                    key={`tab-${activeTab === "shelves"}`}
-                    onClick={() => setActiveTab("shelves")}
-                    className={`relative px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      activeTab === "shelves" ? "text-indigo-700" : "text-gray-600"
-                    } hover:bg-indigo-100`}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Shelves
-                    {activeTab === "shelves" && (
-                      <motion.div
-                        className="absolute inset-0 bg-indigo-100 rounded-lg -z-10"
-                        layoutId="activeTab"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                      />
-                    )}
-                  </motion.button>
-                  <motion.button
-                    key={`tab-${activeTab === "all-books"}`}
-                    onClick={() => setActiveTab("all-books")}
-                    className={`relative px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      activeTab === "all-books" ? "text-indigo-700" : "text-gray-600"
-                    } hover:bg-indigo-100`}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    All Books
-                    {activeTab === "all-books" && (
-                      <motion.div
-                        className="absolute inset-0 bg-indigo-100 rounded-lg -z-10"
-                        layoutId="activeTab"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                      />
-                    )}
-                  </motion.button>
+                  {["shelves", "all-books"].map((tab) => (
+                    <motion.button
+                      key={`tab-${tab}`}
+                      onClick={() => setActiveTab(tab)}
+                      className={`relative px-6 py-2 text-sm font-medium rounded-full transition-colors ${
+                        activeTab === tab ? "text-white" : "text-gray-600"
+                      } hover:text-indigo-600`}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {tab === "shelves" ? "Shelves" : "All Books"}
+                      {activeTab === tab && (
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full -z-10"
+                          layoutId="activeTab"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                        />
+                      )}
+                    </motion.button>
+                  ))}
                 </AnimatePresence>
               </motion.div>
 
@@ -120,9 +98,9 @@ export default function Home() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}
-                  className="w-full pl-9 pr-9 py-2 bg-white border border-gray-200 rounded-xl shadow-sm
+                  className="w-full pl-9 pr-9 py-2 bg-white border-2 border-transparent rounded-full shadow-lg
                            text-gray-800 placeholder-gray-400 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-indigo-500
+                           focus:outline-none focus:border-indigo-500
                            transition-all duration-200"
                 />
                 {searchQuery && (
@@ -172,7 +150,7 @@ export default function Home() {
               >
                 <BookShelf
                   title="Currently Reading"
-                  books={books.currentlyReading || []} 
+                  books={books.currentlyReading || []}
                   onViewAll={() => console.log("View all currently reading")}
                 />
                 <BookShelf
