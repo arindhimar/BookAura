@@ -1,6 +1,4 @@
-"use client"
-
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Button } from "./ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 import {
@@ -15,11 +13,48 @@ import { ModeToggle } from "./ModeToggle"
 import { Search, Bell, BookOpen, Bookmark, User, Menu } from "lucide-react"
 import { Input } from "./ui/input"
 import { motion } from "framer-motion"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export default function UserNavbar() {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
+  const [searchResults, setSearchResults] = useState([])
+  const [searchQuery, setSearchQuery] = useState("")
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const navigate = useNavigate()
+
+  
+  const fetchSearchResults = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([])
+      return
+    }
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/search/${query}`, {
+        headers: {
+          "Authorization": `${localStorage.getItem("token")}`
+        },
+        method: "GET",
+      })
+
+      const books = await response.json()
+      setSearchResults(books)
+    } catch (error) {
+      console.error("Search error:", error)
+    }
+  }
+
+  
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      fetchSearchResults(searchQuery)
+    }, 300)
+
+    return () => clearTimeout(delayDebounce)
+  }, [searchQuery])
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value)
+  }
 
   const logOut = () => {
     localStorage.removeItem("token")
@@ -66,6 +101,7 @@ export default function UserNavbar() {
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* Search Bar with Results */}
               <motion.div
                 className={`hidden md:block relative ${isSearchFocused ? "w-72" : "w-48"}`}
                 animate={{ width: isSearchFocused ? 288 : 192 }}
@@ -75,20 +111,34 @@ export default function UserNavbar() {
                   type="text"
                   placeholder="Search books..."
                   className="pl-10 pr-4 py-2 rounded-full transition-all duration-300 border-primary/20 focus:border-primary"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
                   onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setIsSearchFocused(false)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                 />
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+
+                {/* Search Results Dropdown */}
+                {isSearchFocused && searchResults.length > 0 && (
+                  <div className="absolute top-12 left-0 w-full bg-background border border-primary/20 shadow-lg rounded-lg p-2">
+                    {searchResults.map((book) => (
+                      <div
+                        key={book.book_id}
+                        className="p-2 cursor-pointer hover:bg-primary/10 rounded-md flex items-center space-x-3"
+                        onClick={() => navigate(`/book/${book.book_id}`)}
+                      >
+                        <img src={book.cover || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"} alt={book.title} className="h-10 w-10 rounded-md object-cover" />
+                        <span className="text-sm font-medium">{book.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </motion.div>
 
               <ModeToggle />
 
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative hover:bg-primary/10 transition-colors duration-300"
-                >
+                <Button variant="ghost" size="icon" className="relative hover:bg-primary/10 transition-colors duration-300">
                   <Bell className="h-5 w-5" />
                   <span className="absolute top-0 right-0 h-2 w-2 bg-primary rounded-full" />
                 </Button>
@@ -106,72 +156,20 @@ export default function UserNavbar() {
                 <DropdownMenuContent align="end" className="w-56 glass">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {[
-                    { icon: User, label: "Profile" },
-                    { icon: Bookmark, label: "Bookmarks" },
-                    { icon: BookOpen, label: "Reading List" },
-                  ].map(({ icon: Icon, label }) => (
-                    <DropdownMenuItem key={label} className="group cursor-pointer">
-                      <Icon className="mr-2 h-4 w-4 text-primary group-hover:text-primary-foreground" />
-                      <span className="group-hover:text-primary-foreground">{label}</span>
-                      <motion.div
-                        className="absolute inset-0 bg-primary opacity-0 rounded-sm"
-                        whileHover={{ opacity: 1 }}
-                        transition={{ duration: 0.2 }}
-                      />
-                    </DropdownMenuItem>
-                  ))}
+                  <DropdownMenuItem className="group cursor-pointer">
+                    <User className="mr-2 h-4 w-4 text-primary group-hover:text-primary-foreground" />
+                    <span className="group-hover:text-primary-foreground">Profile</span>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logOut} className="group cursor-pointer">
                     <span className="group-hover:text-primary-foreground">Log out</span>
-                    <motion.div
-                      className="absolute inset-0 bg-primary opacity-0 rounded-sm"
-                      whileHover={{ opacity: 1 }}
-                      transition={{ duration: 0.2 }}
-                    />
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                <Menu className="h-6 w-6" />
-              </Button>
             </div>
           </div>
         </div>
-
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="md:hidden glass"
-          >
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              {["Home", "Browse", "Categories", "My Library"].map((item) => (
-                <Link
-                  key={item}
-                  to={item === "Home" ? "/" : `/${item.toLowerCase().replace(" ", "-")}`}
-                  className="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
-                >
-                  {item}
-                </Link>
-              ))}
-              <div className="relative mt-3 px-3">
-                <Input type="text" placeholder="Search books..." className="w-full pl-10 pr-4 py-2 rounded-full" />
-                <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              </div>
-            </div>
-          </motion.div>
-        )}
       </div>
     </nav>
   )
 }
-

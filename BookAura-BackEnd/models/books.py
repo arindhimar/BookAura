@@ -44,8 +44,9 @@ class BooksModel:
             WHERE 
                 b.book_id = %s
             GROUP BY 
-                b.book_id  -- Ensure only one row per book
+                b.book_id  
             """, (book_id,))
+        
         book = cur.fetchone()
         cur.close()
         return book
@@ -58,45 +59,35 @@ class BooksModel:
         return books
 
     def create_book(self, user_id, title, file_url, description, is_public, is_approved, uploaded_by_role, category_ids):
-        # print("Raw Categories received:", category_ids)  # Debugging
-
-        if isinstance(category_ids, str):  # Fix if received as a string
+        if isinstance(category_ids, str):  
             try:
                 import ast
-                category_ids = ast.literal_eval(category_ids)  # Convert to list if it's a string
+                category_ids = ast.literal_eval(category_ids) 
             except Exception as e:
-                # print("Error parsing category_ids:", e)
                 category_ids = []
 
         if not isinstance(category_ids, list):  
-            # print("Error: category_ids is not a list. Received:", type(category_ids))
-            category_ids = []  # Ensure it's a list
-
-        # print("Processed Categories:", category_ids)  
+            category_ids = []  
 
         cur = self.conn.cursor()
 
-        # Insert the book first
         cur.execute("""
             INSERT INTO books (user_id, title, description, fileUrl, is_public, is_approved, uploaded_by_role) 
             VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (user_id, title, description, file_url, is_public, is_approved, uploaded_by_role))
 
-        book_id = cur.lastrowid  # Fetch the last inserted book ID
-        # print("Inserted book with ID:", book_id)
-
-        # Insert categories only if category_ids is not empty
+        book_id = cur.lastrowid  
+        
+        cur.execute('INSERT INTO views(book_id,book_view) VALUES(%s,%s)',(book_id,0))
+        
+        
         if category_ids:
             for category_id in category_ids:
-                # print("Category ID:", category_id)
                 if isinstance(category_id, (int, str)) and str(category_id).isdigit():  
-                    category_id = int(category_id)  # Ensure it's an integer
+                    category_id = int(category_id)  
                     cur.execute("""
                         INSERT INTO book_category (book_id, category_id) VALUES (%s, %s)
                     """, (book_id, category_id))
-                    # print(f"Inserted book_category: book_id={book_id}, category_id={category_id}")
-
-
         self.conn.commit()
         cur.close()
 
@@ -114,12 +105,21 @@ class BooksModel:
         self.conn.commit()
         cur.close()
         
+    def fetch_unread_books_by_user(self, user_id):
+        """Fetch books that the user has not read yet."""
+        query = """
+        SELECT b.* FROM books b
+        WHERE b.book_id NOT IN (
+            SELECT book_id FROM user_reads WHERE user_id = %s
+        )"""
+        cur = self.conn.cursor()
+        cur.execute(query, (user_id,))
+        return self.cursor.fetchall()
 
-    def get_recommendations(self, user_id, category_ids):
+
+    def fetch_unread_books_by_user_and_category(self, user_id, category_ids):
         cur = self.conn.cursor(dictionary=True)
-        
-        # If category_ids is a list, format it for SQL
-        category_placeholders = ', '.join(['%s'] * len(category_ids))  # Creates (%s, %s, %s, ...)
+        category_placeholders = ', '.join(['%s'] * len(category_ids))  
         
         query = f"""
             SELECT DISTINCT 
@@ -135,15 +135,66 @@ class BooksModel:
             WHERE 
                 b.user_id = %s 
                 OR bc.category_id IN ({category_placeholders})
-            GROUP BY b.book_id -- Random selection
-            LIMIT 10
+            GROUP BY b.book_id
+            LIMIT 5
         """
 
         cur.execute(query, [user_id] + category_ids)  
         recommendations = cur.fetchall()
         cur.close()
         return recommendations
-
+    
+    def fetch_unread_books(self, user_id):
+        """Fetch books that the user has not read yet."""
+        query = """
+        SELECT * from books;
+        """
+        self.cursor.execute(query, (user_id,))
+        return self.cursor.fetchall()
+    
+    def fetch_book_author(self, book_id):
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """SELECT u.username 
+                FROM books b 
+                JOIN users u ON b.user_id = u.user_id 
+                WHERE b.book_id = %s""",
+                (book_id,)
+            )
+            result = cur.fetchone()
+        return result[0] if result else None
+    
+    def search_books(self, query):
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            SELECT 
+                b.book_id, 
+                b.user_id, 
+                b.title, 
+                b.description, 
+                b.fileUrl, 
+                b.is_public, 
+                b.is_approved, 
+                b.uploaded_at, 
+                b.uploaded_by_role,
+                COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories
+            FROM 
+                books b
+            LEFT JOIN 
+                book_category bc ON b.book_id = bc.book_id
+            LEFT JOIN 
+                categories c ON bc.category_id = c.category_id
+            WHERE 
+                b.title LIKE %s
+            GROUP BY 
+                b.book_id
+            """,
+            (f'%{query}%',)
+        )
+        books = cur.fetchall()
+        cur.close()
+        return books
 
 
     def close_connection(self):

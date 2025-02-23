@@ -51,7 +51,6 @@ def get_book(book_id):
 
 @app.route('/', methods=['POST'])
 def create_book():
-    print(request.files)
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
 
@@ -67,16 +66,13 @@ def create_book():
     decoded_token = decode_token(token)
     if not decoded_token:
         return jsonify({'error': 'Invalid token'}), 401
-    
-    print(data)    
     try:
         required_fields = ['title', 'description', 'is_public']
         for field in required_fields:
             if field not in data:
-                print(f'Missing required field: {field}')
                 return jsonify({'error': f'Missing required field: {field}'}), 400
     except e:
-        print(f'Error: {e}')
+        return jsonify({'error': 'Missing required fields'}), 400
         
 
         
@@ -119,19 +115,116 @@ def delete_book(book_id):
     books_model.delete_book(book_id)
     return jsonify({'message': 'Book deleted successfully'}), 200
 
-@app.route('/recommendations', methods=['POST']) 
-def get_recommendations():
-    data = request.get_json()
+@app.route('/unread/user', methods=['GET'])
+def get_unread_books_by_user():
+    """Fetch unread books for the user based on user ID."""
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({'error': 'Authorization token is required'}), 401
 
-    if 'user_id' not in data or 'categories' not in data:
-        return jsonify({'error': 'Missing required fields'}), 400
+    decoded_token = decode_token(token)
+    if not decoded_token:
+        return jsonify({'error': 'Invalid token'}), 401
+
+    user_id = decoded_token['user_id']
+
+    unread_books = books_model.fetch_unread_books_by_user(user_id)
+
+    books = [{
+        'book_id': row[0], 'author_id': row[1], 'title': row[2], 
+        'description': row[3], 'uploaded_by_role': row[8]
+    } for row in unread_books]
+
+    return jsonify(books)
+
+
+@app.route('/unread/category', methods=['GET'])
+def get_unread_books_by_category():
+    """Fetch unread books based on categories."""
+    categories = request.args.get('categories')
+    if not categories:
+        return jsonify({'error': 'Categories are required'}), 400
     
-    user_id = data['user_id']
-    categories = data['categories']  
+    category_list = categories.split(',')  # Expecting comma-separated values
 
-    recommendations = books_model.get_recommendations(user_id, categories)
-    return jsonify(recommendations)
+    unread_books = books_model.fetch_unread_books_by_category(category_list)
+
+    books = [{
+        'book_id': row[0], 'author_id': row[1], 'title': row[2], 
+        'description': row[3], 'uploaded_by_role': row[8]
+    } for row in unread_books]
+
+    return jsonify(books)
+
+
+@app.route('/related', methods=['GET'])
+def get_unread_books_by_user_and_category():
+    """Fetch unread books for the user based on user ID and categories."""
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({'error': 'Authorization token is required'}), 401
+
+    decoded_token = decode_token(token)
+    if not decoded_token:
+        return jsonify({'error': 'Invalid token'}), 401
+
+    user_id = decoded_token['user_id']
+    categories = request.args.get('categories')
+    
+    if not categories:
+        return jsonify({'error': 'Categories are required'}), 400
+
+    category_list = categories.split(',')
+
+    unread_books = books_model.fetch_unread_books_by_user_and_category(user_id, category_list)
+
+    books = [{
+        'book_id': row[0], 'author_id': row[1], 'title': row[2], 
+        'description': row[3], 'uploaded_by_role': row[8]
+    } for row in unread_books]
+
+    return jsonify(books)
+
 
 @app.route('/<filename>')
 def get_pdf(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
+
+@app.route('/unread', methods=['GET'])
+def get_unread_books():
+    """Fetch books that the user has not read yet."""
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({'error': 'Authorization token is required'}), 401
+
+    decoded_token = decode_token(token)
+    if not decoded_token:
+        return jsonify({'error': 'Invalid token'}), 401
+
+    user_id = decoded_token['user_id']
+
+    unread_books = books_model.fetch_unread_books(user_id)
+
+    books = [{
+        'book_id': row[0], 'author_id': row[1], 'title': row[2], 
+        'description': row[3], 'uploaded_by_role': row[8]
+    } for row in unread_books]
+
+    return jsonify(books)
+
+
+@app.route('/<int:book_id>/author', methods=['GET']) 
+def get_book_author(book_id):    
+    author = books_model.fetch_book_author(book_id)
+    if author is None:
+        return jsonify({'error': 'Author not found'}), 404
+    return jsonify({'author_name': author})
+
+
+@app.route('/search/<string:query>', methods=['GET'])  
+def search_books(query):
+    """Search for books based on title and description."""
+    rows = books_model.search_books(query)
+    books = [{'book_id': row[0], 'author_id': row[1], 'title': row[2], 'description': row[3],'uploaded_by_role':row[8]} for row in rows]
+    return jsonify(books)
+    
