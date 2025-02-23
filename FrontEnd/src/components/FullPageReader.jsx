@@ -7,7 +7,8 @@ import { Document, Page, pdfjs } from "react-pdf"
 import "react-pdf/dist/esm/Page/AnnotationLayer.css"
 import "react-pdf/dist/esm/Page/TextLayer.css"
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`
+// Set up the worker properly
+pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.js", import.meta.url).toString()
 
 const FullPageReader = ({ bookUrl, onClose, title, author }) => {
   const [numPages, setNumPages] = useState(null)
@@ -15,6 +16,8 @@ const FullPageReader = ({ bookUrl, onClose, title, author }) => {
   const [scale, setScale] = useState(1.0)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [utterance, setUtterance] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     const synth = window.speechSynthesis
@@ -28,6 +31,13 @@ const FullPageReader = ({ bookUrl, onClose, title, author }) => {
 
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages)
+    setLoading(false)
+  }
+
+  const onDocumentLoadError = (error) => {
+    console.error("Error loading PDF:", error)
+    setError("Failed to load PDF")
+    setLoading(false)
   }
 
   const changePage = (offset) => {
@@ -73,8 +83,31 @@ const FullPageReader = ({ bookUrl, onClose, title, author }) => {
           </div>
         </div>
         <div className="p-4">
-          <Document file={bookUrl} onLoadSuccess={onDocumentLoadSuccess}>
-            <Page pageNumber={pageNumber} scale={scale} />
+          {loading && (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+            </div>
+          )}
+          {error && <div className="flex justify-center items-center h-64 text-red-500">{error}</div>}
+          <Document
+            file={bookUrl}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
+            loading={
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+              </div>
+            }
+          >
+            <Page
+              pageNumber={pageNumber}
+              scale={scale}
+              loading={
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+                </div>
+              }
+            />
           </Document>
         </div>
         <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-2 flex justify-between items-center">
