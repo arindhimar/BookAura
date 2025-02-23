@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { useParams, Link } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
@@ -51,21 +49,21 @@ export default function BookPage() {
           const authorData = await authorResponse.json()
           setAuthor(authorData)
         }
+          
+        // // Fetching recommendations
+        // const recommendationsResponse = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/recommendations`, {
+        //   method: "POST",
+        //   headers: {
+        //     "Content-Type": "application/json",
+        //   },
+        //   body: JSON.stringify({ user_id: bookData.author_id, categories: bookData.categories }),
+        // })
 
-        // Fetching recommendations
-        const recommendationsResponse = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/recommendations`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ user_id: bookData.author_id, categories: bookData.categories }),
-        })
-
-        if (!recommendationsResponse.ok) {
-          throw new Error("Failed to fetch recommendations")
-        }
-        const recommendationsData = await recommendationsResponse.json()
-        setRecommendations(recommendationsData)
+        // if (!recommendationsResponse.ok) {
+        //   throw new Error("Failed to fetch recommendations")
+        // }
+        // const recommendationsData = await recommendationsResponse.json()
+        // setRecommendations(recommendationsData)
       } catch (err) {
         setError(err.message)
       } finally {
@@ -84,12 +82,16 @@ export default function BookPage() {
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`)
       }
+
+
+
+
       window.open(`${import.meta.env.VITE_BASE_API_URL}/books/${book.file_url.replace("uploads/", "")}`, '_blank', 'noopener, noreferrer');
 
       const pdfBlob = await response.blob() 
       const pdfUrl = URL.createObjectURL(pdfBlob)
       console.log(pdfUrl)
-      
+      addView();
       setPdfUrl(pdfUrl)
       setIsReaderOpen(true)
     } catch (err) {

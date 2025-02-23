@@ -1,13 +1,32 @@
-"use client"
-
 import Navbar from "../../components/UserNavbar"
 import RecentlyRead from "../../components/RecentlyRead"
 import Recommendations from "../../components/Recommendations"
 // import Footer from "../../components/Footer"
 import ExploreBooks from "../../components/ExploreBooks"
 import { motion } from "framer-motion"
+import { useEffect,useState } from "react"
+import { useNavigate } from "react-router-dom"
+
 
 export default function Home() {
+  const [userName , setUserName] = useState("User");
+  const navigate = useNavigate();
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/");
+      localStorage.clear();
+    }
+    
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if(user){
+      setUserName(user.username);
+    }
+  }
+  , [])
+
+
   return (
     <main className="min-h-screen flex flex-col">
       <Navbar />
@@ -23,7 +42,7 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          Welcome back to BookAura, John!
+          Welcome back to BookAura!!, {userName}
         </motion.h1>
         <ExploreBooks />
         <RecentlyRead />

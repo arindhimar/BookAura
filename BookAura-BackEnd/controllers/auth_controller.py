@@ -149,3 +149,4 @@ def change_password():
     users_model.update_password(user_id, new_hashed_password)
 
     return jsonify({'message': 'Password updated successfully'}), 200
+
