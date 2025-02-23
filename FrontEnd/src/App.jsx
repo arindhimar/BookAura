@@ -20,6 +20,9 @@ import ContentModerationChallenges from "./pages/moderator/ContentModerationChal
 import ManageCategories from "./pages/platform_administrator/ManageCategories"
 import Home from "./pages/NormalUser/Home"
 import BookPage from "./pages/NormalUser/BookPage"
+import Browse from "./pages/NormalUser/Browse"
+import Categories from "./pages/NormalUser/Categories"
+import Library from "./pages/NormalUser/Library"
 import "react-toastify/dist/ReactToastify.css"
 import BookDetails from "./pages/NormalUser/BookDetails"
 
@@ -96,6 +99,35 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/browse"
+        element={
+          <ProtectedRoute allowedRoles={[4]}>
+            <Browse />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/categories"
+        element={
+          <ProtectedRoute allowedRoles={[4]}>
+            <Categories />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/my-library"
+        element={
+          <ProtectedRoute allowedRoles={[4]}>
+            <Library />
+          </ProtectedRoute>
+        }
+      />
+
+
+
 
       {/* Admin Routes */}
       <Route
@@ -175,7 +207,7 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={[5]}>
             <DashboardLayout userRole="moderator">
-              <Settings/>
+              <Settings />
             </DashboardLayout>
           </ProtectedRoute>
         }
