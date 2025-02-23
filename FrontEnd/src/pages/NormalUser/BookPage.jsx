@@ -78,17 +78,25 @@ export default function BookPage() {
 
   const handleReadNow = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/${id}/pdf`)
+      console.log(book.file_url.replace("uploads/", ""))
+      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/${book.file_url.replace("uploads/", "")}`)
+      
       if (!response.ok) {
-        throw new Error("Failed to fetch PDF")
+        throw new Error(`HTTP error! Status: ${response.status}`)
       }
-      const pdfData = await response.json()
-      setPdfUrl(pdfData.url)
+      window.open(`${import.meta.env.VITE_BASE_API_URL}/books/${book.file_url.replace("uploads/", "")}`, '_blank', 'noopener, noreferrer');
+
+      const pdfBlob = await response.blob() 
+      const pdfUrl = URL.createObjectURL(pdfBlob)
+      console.log(pdfUrl)
+      
+      setPdfUrl(pdfUrl)
       setIsReaderOpen(true)
     } catch (err) {
       console.error("Error fetching PDF:", err)
     }
   }
+  
 
   if (loading) {
     return (

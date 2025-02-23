@@ -1,4 +1,4 @@
-from flask import request, jsonify, Blueprint
+from flask import request, jsonify, Blueprint,send_from_directory
 from models.books import BooksModel
 import os
 from werkzeug.utils import secure_filename
@@ -131,3 +131,7 @@ def get_recommendations():
 
     recommendations = books_model.get_recommendations(user_id, categories)
     return jsonify(recommendations)
+
+@app.route('/<filename>')
+def get_pdf(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)

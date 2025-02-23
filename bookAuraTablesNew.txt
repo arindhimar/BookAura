@@ -74,6 +74,7 @@ CREATE TABLE books (
     user_id INT NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
+    coverUrl TEXT NOT NULL,
     fileUrl TEXT NOT NULL,
     is_public BOOLEAN DEFAULT FALSE,
     is_approved BOOLEAN DEFAULT FALSE,

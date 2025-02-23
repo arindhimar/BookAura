@@ -21,6 +21,7 @@ import ManageCategories from "./pages/platform_administrator/ManageCategories"
 import Home from "./pages/NormalUser/Home"
 import BookPage from "./pages/NormalUser/BookPage"
 import "react-toastify/dist/ReactToastify.css"
+import BookDetails from "./pages/NormalUser/BookDetails"
 
 function AppRoutes() {
   const { user, setUser } = useUser()
@@ -91,7 +92,7 @@ function AppRoutes() {
         path="/book/:id"
         element={
           <ProtectedRoute allowedRoles={[4]}>
-            <BookPage />
+            <BookDetails />
           </ProtectedRoute>
         }
       />
