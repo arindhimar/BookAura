@@ -82,7 +82,9 @@ export default function Categories() {
   };
 
   const handleBookClick = (book) => {
+    console.log(book)
     setSelectedBook(selectedBook?.book_id === book.book_id ? null : book);
+    navigate(`/book/${book.book_id}`);
   };
 
   const handleCategoryClick = (categoryId) => {
@@ -155,15 +157,16 @@ export default function Categories() {
                               className={`relative cursor-pointer ${
                                 selectedBook?.book_id === book.book_id ? "scale-110 shadow-lg" : "scale-100"
                               } transition-transform duration-300`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleBookClick(book);
-                              }}
+                              
                             >
                               <img
                                 src={book.cover || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
                                 alt={book.title}
                                 className="object-cover w-full h-full transition-transform duration-300"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleBookClick(book);
+                                }}
                               />
                               <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white text-sm px-2 py-1 rounded">
                                 {book.title}
