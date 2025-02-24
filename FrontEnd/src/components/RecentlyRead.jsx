@@ -1,42 +1,78 @@
-"use client"
-
 import { Card } from "./ui/card"
 import { Button } from "./ui/button"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { BookOpen, Clock } from "lucide-react"
+import { useState, useEffect } from "react"
 
-const recentBooks = [
-  {
-    id: 1,
-    title: "The Great Gatsby",
-    author: "F. Scott Fitzgerald",
-    progress: 75,
-    cover: "/placeholder.svg?height=300&width=200",
-    timeLeft: "2 hours left",
-    chapter: "Chapter 7",
-  },
-  {
-    id: 2,
-    title: "To Kill a Mockingbird",
-    author: "Harper Lee",
-    progress: 30,
-    cover: "/placeholder.svg?height=300&width=200",
-    timeLeft: "4 hours left",
-    chapter: "Chapter 3",
-  },
-  {
-    id: 3,
-    title: "1984",
-    author: "George Orwell",
-    progress: 50,
-    cover: "/placeholder.svg?height=300&width=200",
-    timeLeft: "3 hours left",
-    chapter: "Chapter 5",
-  },
-]
+
+
+// const recentBooks = [
+//   {
+//     id: 1,
+//     title: "The Great Gatsby",
+//     author: "F. Scott Fitzgerald",
+//     progress: 75,
+//     cover: "/placeholder.svg?height=300&width=200",
+//     timeLeft: "2 hours left",
+//     chapter: "Chapter 7",
+//   },
+//   {
+//     id: 2,
+//     title: "To Kill a Mockingbird",
+//     author: "Harper Lee",
+//     progress: 30,
+//     cover: "/placeholder.svg?height=300&width=200",
+//     timeLeft: "4 hours left",
+//     chapter: "Chapter 3",
+//   },
+//   {
+//     id: 3,
+//     title: "1984",
+//     author: "George Orwell",
+//     progress: 50,
+//     cover: "/placeholder.svg?height=300&width=200",
+//     timeLeft: "3 hours left",
+//     chapter: "Chapter 5",
+//   },
+// ]
 
 export default function RecentlyRead() {
+
+  const [recentBooks, setRecentBooks] = useState([]);
+
+  useEffect(() => {
+    const fetchRecentBooks = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("User not authenticated");
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_BASE_API_URL}/books/`,
+          {
+            headers: {
+              Authorization: token,
+            },
+            method: "GET",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch recent books");
+        }
+
+        const data = await response.json();
+        setRecentBooks(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchRecentBooks();
+  },[]);
+
   return (
     <motion.section
       initial={{ opacity: 0 }}
@@ -58,11 +94,11 @@ export default function RecentlyRead() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 * index, duration: 0.5 }}
           >
-            <Link to={`/book/${book.id}`}>
+            <Link to={`/book/${book.book_id}`}>
               <Card className="modern-card group cursor-pointer">
                 <div className="relative aspect-[3/4] overflow-hidden rounded-t-2xl">
                   <img
-                    src={book.cover || "/placeholder.svg"}
+                    src={book.cover || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
                     alt={book.title}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />

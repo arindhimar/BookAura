@@ -84,7 +84,7 @@ export default function UserNavbar() {
                 {["Home", "Browse", "Categories", "My Library"].map((item) => (
                   <Link
                     key={item}
-                    to={item === "Home" ? "/" : `/${item.toLowerCase().replace(" ", "-")}`}
+                    to={item === "Home" ? "/home" : `/${item.toLowerCase().replace(" ", "-")}`}
                     className="relative group px-4 py-2 rounded-full text-sm font-medium transition-colors"
                   >
                     <span className="relative z-10 text-foreground group-hover:text-primary-foreground transition-colors">
