@@ -211,7 +211,6 @@ class BooksModel:
     def fetch_books_by_category(self, category_id):
         cur = self.conn.cursor(dictionary=True)
         
-        # Ensure all previous results are consumed
         while cur.nextset():
             cur.fetchall()
         

@@ -173,7 +173,7 @@ def get_unread_books_by_user_and_category():
     
     if not categories:
         return jsonify({'error': 'Categories are required'}), 400
-    print(categories.split(','))
+    # print(categories.split(','))
     category_list = categories.split(',')
 
     unread_books = books_model.fetch_unread_books_by_user_and_category(user_id, category_list)

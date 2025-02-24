@@ -16,7 +16,7 @@ def generate_token(user_id, username, role_id):
             'user_id': user_id,
             'username': username,
             'role_id': role_id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=2)
         },
         current_app.config['SECRET_KEY'],
         algorithm='HS256'
