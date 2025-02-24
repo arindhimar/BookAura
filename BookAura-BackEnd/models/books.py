@@ -116,33 +116,45 @@ class BooksModel:
         cur.execute(query, (user_id,))
         return self.cursor.fetchall()
 
-
-    def fetch_unread_books_by_user_and_category(self, user_id, category_ids):
+    def fetch_unread_books_by_user_and_category(self, user_id, category_names):
         cur = self.conn.cursor(dictionary=True)
-        category_placeholders = ', '.join(['%s'] * len(category_ids))  
-        
+
+        if not category_names:
+            return []
+
+        category_placeholders = ', '.join(['%s'] * len(category_names))
+        cur.execute(f"SELECT category_id FROM categories WHERE category_name IN ({category_placeholders})", tuple(category_names))
+        category_ids = [row['category_id'] for row in cur.fetchall()]
+
+        if not category_ids:
+            return []
+
+        # Fetch books with author names and categories
+        category_id_placeholders = ', '.join(['%s'] * len(category_ids))
         query = f"""
             SELECT DISTINCT 
                 b.book_id, 
-                b.user_id, 
+                b.user_id AS author_id, 
+                u.username AS author_name, 
                 b.title, 
                 b.description, 
                 b.fileUrl, 
-                COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories
+                b.uploaded_by_role,
+                COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories  -- Fetching categories
             FROM books b
             LEFT JOIN book_category bc ON b.book_id = bc.book_id
             LEFT JOIN categories c ON bc.category_id = c.category_id
-            WHERE 
-                b.user_id = %s 
-                OR bc.category_id IN ({category_placeholders})
-            GROUP BY b.book_id
-            LIMIT 5
+            LEFT JOIN users u ON b.user_id = u.user_id  
+            WHERE bc.category_id IN ({category_id_placeholders})
+            GROUP BY b.book_id, u.username  
+            LIMIT 5;
         """
+        
+        cur.execute(query, tuple(category_ids))
+        return cur.fetchall()
 
-        cur.execute(query, [user_id] + category_ids)  
-        recommendations = cur.fetchall()
-        cur.close()
-        return recommendations
+
+
     
     def fetch_unread_books(self, user_id):
         """Fetch books that the user has not read yet."""
@@ -195,6 +207,43 @@ class BooksModel:
         books = cur.fetchall()
         cur.close()
         return books
+    
+    def fetch_books_by_category(self, category_id):
+        cur = self.conn.cursor(dictionary=True)
+        
+        # Ensure all previous results are consumed
+        while cur.nextset():
+            cur.fetchall()
+        
+        query = """
+            SELECT DISTINCT 
+                b.book_id, 
+                b.user_id AS author_id, 
+                u.username AS author_name, 
+                b.title, 
+                b.description, 
+                b.fileUrl, 
+                b.uploaded_by_role,
+                GROUP_CONCAT(c.category_name SEPARATOR ', ') AS categories
+            FROM books b
+            LEFT JOIN book_category bc ON b.book_id = bc.book_id
+            LEFT JOIN categories c ON bc.category_id = c.category_id
+            LEFT JOIN users u ON b.user_id = u.user_id
+            WHERE bc.category_id = %s
+            GROUP BY b.book_id
+            LIMIT 5;
+        """
+
+        cur.execute(query, (category_id,))
+        #printexecuted query
+        # print(cur.statement)
+        books = cur.fetchall()
+
+        cur.close()  
+        return books
+
+
+        
 
 
     def close_connection(self):

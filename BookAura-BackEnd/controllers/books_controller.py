@@ -173,17 +173,12 @@ def get_unread_books_by_user_and_category():
     
     if not categories:
         return jsonify({'error': 'Categories are required'}), 400
-
+    print(categories.split(','))
     category_list = categories.split(',')
 
     unread_books = books_model.fetch_unread_books_by_user_and_category(user_id, category_list)
 
-    books = [{
-        'book_id': row[0], 'author_id': row[1], 'title': row[2], 
-        'description': row[3], 'uploaded_by_role': row[8]
-    } for row in unread_books]
-
-    return jsonify(books)
+    return jsonify(unread_books)
 
 
 @app.route('/<filename>')
@@ -228,3 +223,19 @@ def search_books(query):
     books = [{'book_id': row[0], 'author_id': row[1], 'title': row[2], 'description': row[3],'uploaded_by_role':row[8]} for row in rows]
     return jsonify(books)
     
+@app.route('/category/<int:category_id>', methods=['GET'])
+def get_books_by_category(category_id):
+    rows = books_model.fetch_books_by_category(category_id)
+    
+    books = [{
+        'book_id': row['book_id'],
+        'author_id': row['author_id'],
+        'author_name': row['author_name'], 
+        'title': row['title'],
+        'description': row['description'],
+        'fileUrl': row['fileUrl'],  
+        'uploaded_by_role': row['uploaded_by_role'],
+        'categories': row['categories'].split(', ') if row['categories'] else []  # Handle categories correctly
+    } for row in rows]
+
+    return jsonify(books)
