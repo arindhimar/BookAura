@@ -2,7 +2,8 @@ import mysql.connector
 
 class CategoriesModel:
     def __init__(self):
-        self.conn = self.get_db_connection()
+        self.conn=self.get_db_connection()
+        
     
     def get_db_connection(self):
         return mysql.connector.connect(
