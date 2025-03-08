@@ -13,42 +13,28 @@ books_model = BooksModel()
 UPLOAD_FOLDER = 'uploads/'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-def upload_file(file):
-    """
-    Save the uploaded file with a unique name and trigger the translation process.
-    """
-    if not file:
+def upload_file(file, title):
+    """Save uploaded file with standardized naming convention"""
+    if not file or not title:
         return None
 
-    # Rename the file with a timestamp for uniqueness.
-    original_filename = secure_filename(file.filename)
-    unique_filename = f"{int(time.time())}_{original_filename}"
-    file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+    clean_title = secure_filename(title).replace(' ', '_')[:50]
+    timestamp = int(time.time())
+    filename, ext = os.path.splitext(secure_filename(file.filename))
+    
+    new_filename = f"{clean_title}_{timestamp}_en{ext}"
+    file_path = os.path.join(UPLOAD_FOLDER, new_filename)
+    
     file.save(file_path)
-
-    # Trigger the translation process.
     trigger_translation(file_path)
-    return file_path  
+    return file_path
 
-def trigger_translation(file_path):
-    """
-    Execute a Selenium script that translates the uploaded PDF into multiple languages.
-    The script uses the provided code snippet which:
-      - Iterates over target languages (Hindi and Marathi).
-      - Opens Google Translate Docs for each language.
-      - Uploads the input PDF.
-      - Clicks through to translate and download the translated PDF.
-      - Waits briefly, then moves/renames the downloaded PDF to the designated output folder.
-    """
-    # Get the absolute path of the uploaded file.
-    abs_file_path = os.path.abspath(file_path)
-    # Use a raw string (via r"") to prevent escape-sequence issues.
-    safe_input_pdf = abs_file_path.replace("\\", "\\\\")
-    
-    # Update the output folder as desired (here, using your provided absolute folder).
-    output_folder = r"C:/Users/Arin Dhimar/Documents/BookAura/Translation/"
-    
-    # Build the multi-language Selenium script using your provided snippet.
+def trigger_translation(original_path):
+    """Handle PDF translation and filename management"""
+    abs_path = os.path.abspath(original_path)
+    safe_path = abs_path.replace("\\", "\\\\")
+    output_dir = r"C:/Users/Arin Dhimar/Documents/BookAura/BookAuta-BackEnd/uploads/"
+
     script = f'''
 import os
 import time
@@ -58,64 +44,57 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-# File path for input PDF (from the Flask upload)
-input_pdf = r"{safe_input_pdf}"
-# Output folder where the translated PDFs will be saved.
-output_folder = r"{output_folder}"
+input_pdf = r"{safe_path}"
+output_folder = r"{output_dir}"
+lang_map = {{"hi": "Hindi", "mr": "Marathi"}}
 
-# List of target languages (Hindi & Marathi)
-languages = {{"hi": "Hindi", "mr": "Marathi"}}
-
-# Initialize Chrome with options.
 options = webdriver.ChromeOptions()
-options.add_argument("--disable-blink-features=AutomationControlled")
+prefs = {{"download.default_directory": output_folder}}
+options.add_experimental_option("prefs", prefs)
 driver = webdriver.Chrome(options=options)
 
-for lang_code, lang_name in languages.items():
+base_name = os.path.basename(input_pdf)
+for lang_code, lang_name in lang_map.items():
     try:
-        print(f"Translating to {{lang_name}}...")
-        # Open Google Translate Docs page for the target language.
+        print(f"Processing {{lang_name}} translation...")
         driver.get(f"https://translate.google.com/?sl=en&tl={{lang_code}}&op=docs")
-        # Wait for the file input element and upload the PDF.
-        file_input = WebDriverWait(driver, 20).until(
+        
+        # Upload document
+        WebDriverWait(driver, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, 'input[type="file"]'))
-        )
-        file_input.send_keys(input_pdf)
-        print(f"File uploaded for {{lang_name}}.")
-        # Click the "Translate" button.
-        translate_button = WebDriverWait(driver, 20).until(
+        ).send_keys(input_pdf)
+        
+        # Initiate translation
+        WebDriverWait(driver, 20).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, '[jsname="vSSGHe"]'))
-        )
-        translate_button.click()
-        print(f"Translation to {{lang_name}} started.")
-        # Wait for translation to complete and download button to be clickable.
-        download_button = WebDriverWait(driver, 60).until(
+        ).click()
+        
+        # Download translated version
+        WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, '[jsname="hRZeKc"]'))
-        )
-        print(f"Translation to {{lang_name}} completed. Downloading...")
-        download_button.click()
-        print(f"Download initiated for {{lang_name}}.")
-        # Wait for the download to complete.
-        time.sleep(10)  # Adjust sleep time based on network speed.
-        # Determine the default download directory (assuming Windows default).
-        download_dir = os.path.join(os.path.expanduser("~"), "Downloads") + os.sep
-        # Get a list of all PDF files in the download directory.
-        files = os.listdir(download_dir)
-        pdf_files = [f for f in files if f.lower().endswith('.pdf')]
-        if pdf_files:
-            # Get the most recently created PDF file.
-            translated_pdf = max([os.path.join(download_dir, f) for f in pdf_files], key=os.path.getctime)
-            new_filename = os.path.join(output_folder, f"Translated_{{lang_name}}.pdf")
-            shutil.move(translated_pdf, new_filename)
-            print(f"Saved translated PDF: {{new_filename}}")
-        else:
-            print("No PDF files found in the download directory.")
+        ).click()
+        time.sleep(10)  # Allow download completion
+        
+        # Rename downloaded file
+        translated_prefix = base_name.replace("_en", f"_{{lang_code}}")
+        downloaded_files = [f for f in os.listdir(output_folder) 
+                          if f.startswith("Translated") and f.endswith(".pdf")]
+        
+        if downloaded_files:
+            latest_file = max(
+                [os.path.join(output_folder, f) for f in downloaded_files],
+                key=os.path.getctime
+            )
+            new_path = os.path.join(output_folder, translated_prefix)
+            os.rename(latest_file, new_path)
+            print(f"Renamed to: {{new_path}}")
+            
     except Exception as e:
-        print(f"Error translating to {{lang_name}}: {{e}}")
+        print(f"Error processing {{lang_name}}: {{str(e)}}")
+
 driver.quit()
-print("Translation process completed.")
+print("Translation workflow complete.")
 '''
-    # Launch the translation process in a separate process.
     subprocess.Popen(['python', '-c', script])
 
 @app.route('/', methods=['GET'])
@@ -153,33 +132,51 @@ def get_book(book_id):
 def create_book():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
+        
+    data = request.form
     file = request.files['file']
-    file_url = upload_file(file)
-    data = request.form  
+    
+    # Validate required fields
+    required_fields = ['title', 'description', 'is_public', 'uploaded_by_role']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'Missing required field: {field}'}), 400
+
+    # Authentication
     token = request.headers.get('Authorization')
     if not token:
         return jsonify({'error': 'Authorization token is required'}), 401
     decoded_token = decode_token(token)
     if not decoded_token:
         return jsonify({'error': 'Invalid token'}), 401
-    # Validate required fields.
-    required_fields = ['title', 'description', 'is_public']
-    for field in required_fields:
-        if field not in data:
-            return jsonify({'error': f'Missing required field: {field}'}), 400
-    is_public = data['is_public'].lower() == 'true'
-    uploaded_by_role = data['uploaded_by_role']
-    books_model.create_book(
-        user_id=int(decoded_token['user_id']),
-        title=data['title'],
-        description=data['description'],
-        file_url=file_url,
-        is_public=is_public,
-        is_approved="0",
-        uploaded_by_role=uploaded_by_role,
-        category_ids=data['category_ids']
-    )
-    return jsonify({'message': 'Book created successfully', 'file_url': file_url}), 201
+
+    # File handling with title-based naming
+    file_url = upload_file(file, data['title'])
+    if not file_url:
+        return jsonify({'error': 'File processing failed'}), 500
+
+    # Database operations
+    try:
+        books_model.create_book(
+            user_id=int(decoded_token['user_id']),
+            title=data['title'],
+            description=data['description'],
+            file_url=file_url,
+            is_public=data['is_public'].lower() == 'true',
+            is_approved=False,
+            uploaded_by_role=data['uploaded_by_role'],
+            category_ids=data.get('category_ids', '')
+        )
+        return jsonify({
+            'message': 'Book created successfully',
+            'file_url': file_url,
+            'translations': [
+                file_url.replace('_en', '_hi'),
+                file_url.replace('_en', '_mr')
+            ]
+        }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/<int:book_id>', methods=['PUT'])
 def update_book(book_id):
