@@ -58,38 +58,71 @@ class BooksModel:
         cur.close()
         return books
 
-    def create_book(self, user_id, title, file_url, description, is_public, is_approved, uploaded_by_role, category_ids):
-        if isinstance(category_ids, str):  
+    # def create_book(self, user_id, title, file_url, description, is_public, is_approved, uploaded_by_role, category_ids):
+    #     if isinstance(category_ids, str):  
+    #         try:
+    #             import ast
+    #             category_ids = ast.literal_eval(category_ids) 
+    #         except Exception as e:
+    #             category_ids = []
+
+    #     if not isinstance(category_ids, list):  
+    #         category_ids = []  
+
+    #     cur = self.conn.cursor()
+
+    #     cur.execute("""
+    #         INSERT INTO books (user_id, title, description, fileUrl, is_public, is_approved, uploaded_by_role) 
+    #         VALUES (%s, %s, %s, %s, %s, %s, %s)
+    #     """, (user_id, title, description, file_url, is_public, is_approved, uploaded_by_role))
+
+    #     book_id = cur.lastrowid  
+        
+    #     cur.execute('INSERT INTO views(book_id,book_view) VALUES(%s,%s)',(book_id,0))
+        
+        
+    #     if category_ids:
+    #         for category_id in category_ids:
+    #             if isinstance(category_id, (int, str)) and str(category_id).isdigit():  
+    #                 category_id = int(category_id)  
+    #                 cur.execute("""
+    #                     INSERT INTO book_category (book_id, category_id) VALUES (%s, %s)
+    #                 """, (book_id, category_id))
+    #     self.conn.commit()
+    #     cur.close()
+
+
+    def create_book(self, user_id, title, description, file_url, is_public, is_approved, uploaded_by_role, category_ids):
+        if isinstance(category_ids, str):
             try:
                 import ast
-                category_ids = ast.literal_eval(category_ids) 
-            except Exception as e:
+                category_ids = ast.literal_eval(category_ids)
+            except:
                 category_ids = []
 
-        if not isinstance(category_ids, list):  
-            category_ids = []  
+        with self.conn.cursor() as cur:
+            try:
+                cur.execute("""
+                    INSERT INTO books (user_id, title, description, fileUrl, is_public, is_approved, uploaded_by_role) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (user_id, title, description, file_url, is_public, is_approved, uploaded_by_role))
 
-        cur = self.conn.cursor()
+                book_id = cur.lastrowid
+                cur.execute('INSERT INTO views(book_id,book_view) VALUES(%s,%s)', (book_id, 0))
 
-        cur.execute("""
-            INSERT INTO books (user_id, title, description, fileUrl, is_public, is_approved, uploaded_by_role) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (user_id, title, description, file_url, is_public, is_approved, uploaded_by_role))
+                if category_ids:
+                    for category_id in category_ids:
+                        if str(category_id).isdigit():
+                            cur.execute("""
+                                INSERT INTO book_category (book_id, category_id)
+                                VALUES (%s, %s)
+                            """, (book_id, int(category_id)))
 
-        book_id = cur.lastrowid  
-        
-        cur.execute('INSERT INTO views(book_id,book_view) VALUES(%s,%s)',(book_id,0))
-        
-        
-        if category_ids:
-            for category_id in category_ids:
-                if isinstance(category_id, (int, str)) and str(category_id).isdigit():  
-                    category_id = int(category_id)  
-                    cur.execute("""
-                        INSERT INTO book_category (book_id, category_id) VALUES (%s, %s)
-                    """, (book_id, category_id))
-        self.conn.commit()
-        cur.close()
+                self.conn.commit()
+                return True
+            except Exception as e:
+                self.conn.rollback()
+                raise e
 
 
     def update_book(self, book_id,title, description, is_public, is_approved):
@@ -100,10 +133,35 @@ class BooksModel:
         cur.close()
 
     def delete_book(self, book_id):
-        cur = self.conn.cursor()
-        cur.execute('DELETE FROM books WHERE book_id = %s', (book_id,))
-        self.conn.commit()
-        cur.close()
+        try:
+            cur = self.conn.cursor()
+            
+            cur.execute("SET FOREIGN_KEY_CHECKS = 0")
+            
+            tables = [
+                'book_category',
+                'views',
+                'bookmarks',
+                'audio_requests',
+                'reading_history',
+                'reports'
+            ]
+            
+            for table in tables:
+                cur.execute(f'DELETE FROM {table} WHERE book_id = %s', (book_id,))
+            
+            cur.execute('DELETE FROM books WHERE book_id = %s', (book_id,))
+            
+            cur.execute("SET FOREIGN_KEY_CHECKS = 1")
+            
+            self.conn.commit()
+            return True
+        except Exception as e:
+            self.conn.rollback()
+            print(f"Error deleting book: {e}")
+            return False
+        finally:
+            cur.close()
         
     def fetch_unread_books_by_user(self, user_id):
         """Fetch books that the user has not read yet."""
