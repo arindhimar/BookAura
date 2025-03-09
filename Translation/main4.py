@@ -2,91 +2,76 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import os
 import time
+import os
+import shutil
 
-# Configure headless options
+# File path for input PDF
+input_pdf = "C:/Users/Arin Dhimar/Documents/BookAura/Translation/input.pdf"
+output_folder = "C:/Users/Arin Dhimar/Documents/BookAura/Translation/"
+
+# List of target languages (Hindi & Marathi)
+languages = {"hi": "Hindi", "mr": "Marathi"}
+
+# Initialize Chrome with options
 options = webdriver.ChromeOptions()
-options.add_argument("--headless=new")  # Modern headless mode
-options.add_argument("--disable-gpu")
-options.add_argument("--window-size=1920,1080")
 options.add_argument("--disable-blink-features=AutomationControlled")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-
-# Set download directory (create if doesn't exist)
-download_dir = os.path.join(os.path.expanduser("~"), "Documents", "TranslatedPDFs")
-os.makedirs(download_dir, exist_ok=True)
-
-# Configure download preferences
-options.add_experimental_option("prefs", {
-    "download.default_directory": download_dir,
-    "download.prompt_for_download": False,
-    "plugins.always_open_pdf_externally": True,
-    "profile.default_content_settings.popups": 0
-})
-
-# Initialize driver with anti-detection
+options.add_argument("--headless=new")
 driver = webdriver.Chrome(options=options)
-driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-    "source": """
-    Object.defineProperty(navigator, 'webdriver', {
-        get: () => undefined
-    });
-    """
-})
 
-try:
-    driver.get("https://translate.google.com/?sl=en&tl=mr&op=docs")
-    print("Loaded Google Translate document page")
+for lang_code, lang_name in languages.items():
+    try:
+        print(f"Translating to {lang_name}...")
 
-    # Verify languages through UI elements
-    WebDriverWait(driver, 15).until(
-        EC.text_to_be_present_in_element((By.CSS_SELECTOR, ".SLOrkd"), "English")
-    )
-    WebDriverWait(driver, 15).until(
-        EC.text_to_be_present_in_element((By.CSS_SELECTOR, ".TLOrkd"), "Marathi")
-    )
+        # Open Google Translate Docs page with the selected language
+        driver.get(f"https://translate.google.com/?sl=en&tl={lang_code}&op=docs")
 
-    # Upload file
-    file_input = WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, 'input[type="file"]'))
-    )
-    file_input.send_keys("C:/Users/Arin Dhimar/Documents/BookAura/Translation/input.pdf")
-    print("PDF file uploaded successfully")
+        # Upload the PDF file
+        file_input = WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'input[type="file"]'))
+        )
+        file_input.send_keys(input_pdf)
+        print(f"File uploaded for {lang_name}.")
 
-    # Initiate translation
-    translate_button = WebDriverWait(driver, 20).until(
-        EC.element_to_be_clickable((By.CSS_SELECTOR, '[jsname="vSSGHe"]'))
-    )
-    driver.execute_script("arguments[0].click();", translate_button)
-    print("Translation process started")
+        # Click the "Translate" button
+        translate_button = WebDriverWait(driver, 20).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, '[jsname="vSSGHe"]'))
+        )
+        translate_button.click()
+        print(f"Translation to {lang_name} started.")
 
-    # Wait for translation completion
-    WebDriverWait(driver, 60).until(
-        EC.invisibility_of_element_located((By.CSS_SELECTOR, ".Wt5Tfe"))  # Progress spinner
-    )
-    print("Translation completed")
+        # Wait for translation to complete
+        download_button = WebDriverWait(driver, 60).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, '[jsname="hRZeKc"]'))
+        )
+        print(f"Translation to {lang_name} completed. Downloading...")
 
-    # Trigger download
-    download_button = WebDriverWait(driver, 30).until(
-        EC.element_to_be_clickable((By.CSS_SELECTOR, '[jsname="hRZeKc"]'))
-    )
-    driver.execute_script("arguments[0].click();", download_button)
-    print("Download initiated")
+        # Click the download button
+        download_button.click()
+        print(f"Download initiated for {lang_name}.")
 
-    # Verify download completion
-    time.sleep(10)  # Allow time for download
-    downloaded_files = [f for f in os.listdir(download_dir) if f.endswith(".pdf")]
-    if downloaded_files:
-        print(f"Download successful! File saved to: {os.path.join(download_dir, downloaded_files[-1])}")
-    else:
-        print("Download verification failed - check download directory")
+        # Wait for the download to complete
+        time.sleep(10)  # Adjust this sleep time based on network speed
 
-except Exception as e:
-    print(f"Error occurred: {str(e)}")
-    driver.save_screenshot("error_screenshot.png")
-    print("Saved error screenshot to error_screenshot.png")
+        # Locate the most recent PDF in the default download folder
+        download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
+        pdf_files = [os.path.join(download_dir, f) for f in os.listdir(download_dir) if f.endswith(".pdf")]
+        if not pdf_files:
+            raise Exception("No PDF found in the Downloads folder.")
 
-finally:
-    driver.quit()
+        translated_pdf = max(pdf_files, key=os.path.getctime)
+
+        # Build new file name: keep original file name + language tag + unique timestamp
+        base_name = os.path.splitext(os.path.basename(input_pdf))[0]
+        unique_tag = int(time.time())
+        new_filename = os.path.join(output_folder, f"{base_name}_{lang_name}_{unique_tag}.pdf")
+
+        shutil.move(translated_pdf, new_filename)
+        print(f"Saved translated PDF as: {new_filename}")
+
+    except Exception as e:
+        print(f"Error translating to {lang_name}: {e}")
+
+# Close the browser
+driver.quit()
+print("Translation process completed.")

@@ -9,6 +9,7 @@ import { Checkbox } from "../../components/ui/checkbox"
 import { Switch } from "../../components/ui/switch"
 import { Plus, Pencil, Trash, Loader2 } from "lucide-react"
 import { toast } from "react-toastify"
+import { useNavigate } from "react-router-dom"
 
 export default function ManageBooks() {
   const [books, setBooks] = useState([])
@@ -21,10 +22,11 @@ export default function ManageBooks() {
     category_ids: [],
     is_public: false,
     file: null,
-    uploaded_by_role:"Publisher"
+    uploaded_by_role: "Publisher"
   })
   const [editingBook, setEditingBook] = useState(null)
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
 
   useEffect(() => {
     fetchBooks()
@@ -32,9 +34,15 @@ export default function ManageBooks() {
   }, [])
 
   const fetchBooks = async () => {
+    if (localStorage.getItem("token") === null) {
+      navigate("/")
+      toast.error("You are not authorized to view this page")
+      return
+    }
+
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/`, {
+      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/publisher/`, {
         headers: {
           Authorization: `${token}`,
         },
@@ -94,8 +102,7 @@ export default function ManageBooks() {
       }
       await fetchBooks()
       setIsAddBookOpen(false)
-    uploaded_by_role:"Publisher"
-      setNewBook({ title: "", description: "", category_ids: [], is_public: false, file: null, uploaded_by_role:"Publisher" })
+      setNewBook({ title: "", description: "", category_ids: [], is_public: false, file: null, uploaded_by_role: "Publisher" })
       toast.success("Book added successfully")
     } catch (error) {
       toast.error(error.message)
@@ -205,9 +212,7 @@ export default function ManageBooks() {
             <TableRow key={book.book_id}>
               <TableCell className="font-medium">{book.title}</TableCell>
               <TableCell>{book.description.substring(0, 50)}...</TableCell>
-              <TableCell>
-                {/* {book.category_ids.map((id) => categories.find((c) => c.category_id === id)?.category_name).join(", ")} */}
-              </TableCell>
+              <TableCell>{book.categories}</TableCell>
               <TableCell>{book.is_public ? "Yes" : "No"}</TableCell>
               <TableCell>{book.is_approved ? "Yes" : "No"}</TableCell>
               <TableCell>
@@ -383,4 +388,3 @@ export default function ManageBooks() {
     </div>
   )
 }
-
