@@ -1,39 +1,31 @@
+"use client"
+
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
-import { Bookmark, BookmarkCheck } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { Bookmark, BookmarkCheck, Headphones } from "lucide-react"
+import { motion } from "framer-motion"
 import { useState, useEffect } from "react"
-import BookReviews from "./BookReviews"
-import BookComments from "./BookComments"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 
 export default function BookDetailsComponent({ book }) {
-  const [activeTab, setActiveTab] = useState("reviews")
   const [isBookmarked, setIsBookmarked] = useState(undefined)
   const [selectedLanguage, setSelectedLanguage] = useState("english") // Default language
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [audio, setAudio] = useState(null)
 
   const handleBookmarks = async () => {
     try {
       const method = isBookmarked ? "DELETE" : "POST"
-      const response = await fetch(
-        `${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`,
-        {
-          method,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `${localStorage.getItem("token")}`,
-          },
-        }
-      )
+      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `${localStorage.getItem("token")}`,
+        },
+      })
 
       if (!response.ok) throw new Error("Bookmark update failed")
-      
+
       setIsBookmarked(!isBookmarked)
     } catch (error) {
       console.error("Error updating bookmark:", error)
@@ -43,14 +35,11 @@ export default function BookDetailsComponent({ book }) {
   useEffect(() => {
     const fetchBookmarkStatus = async () => {
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`,
-          {
-            headers: { Authorization: `${localStorage.getItem("token")}` },
-            method: "GET",
-          }
-        )
-        
+        const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`, {
+          headers: { Authorization: `${localStorage.getItem("token")}` },
+          method: "GET",
+        })
+
         if (response.ok) {
           const data = await response.json()
           setIsBookmarked(data.is_bookmarked)
@@ -61,27 +50,73 @@ export default function BookDetailsComponent({ book }) {
     }
 
     if (book) fetchBookmarkStatus()
-  }, [book])
+
+    // Cleanup audio when component unmounts
+    return () => {
+      if (audio) {
+        audio.pause()
+        audio.src = ""
+      }
+    }
+  }, [book, audio])
+
+  const addView = () => {
+    // Implementation for addView function
+    console.log("addView function called")
+  }
+
+  const addReadingHistory = () => {
+    // Implementation for addReadingHistory function
+    console.log("addReadingHistory function called")
+  }
 
   const handleReadNow = async () => {
     try {
-      const filePath = book.fileUrl.replace("uploads/", "");
-      
+      const filePath = book.fileUrl.replace("uploads/", "")
+
       // Append the selected language as a query parameter
-      const language = selectedLanguage; // Assuming selectedLanguage is defined in your component
-      const url = `${import.meta.env.VITE_BASE_API_URL}/books/${filePath}?language=${language}`;
-  
-      const response = await fetch(url);
-  
+      const language = selectedLanguage
+      const url = `${import.meta.env.VITE_BASE_API_URL}/books/${filePath}?language=${language}`
+
+      const response = await fetch(url)
+
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+        throw new Error(`HTTP error! Status: ${response.status}`)
       }
-  
-      window.open(url, "_blank", "noopener, noreferrer");
-      addView();
-      addReadingHistory();
+
+      window.open(url, "_blank", "noopener, noreferrer")
+      addView()
+      addReadingHistory()
     } catch (err) {
-      console.error("Error fetching PDF:", err);
+      console.error("Error fetching PDF:", err)
+    }
+  }
+
+  const handleListenNow = async () => {
+    try {
+      if (isPlaying && audio) {
+        audio.pause()
+        setIsPlaying(false)
+        return
+      }
+
+      // Create URL for audio based on selected language
+      const audioUrl = `${import.meta.env.VITE_BASE_API_URL}/books/audio/${book.book_id}?language=${selectedLanguage}`
+
+      // Create new audio instance or reuse existing
+      const audioInstance = audio || new Audio(audioUrl)
+
+      if (!audio) {
+        setAudio(audioInstance)
+        audioInstance.addEventListener("ended", () => setIsPlaying(false))
+      } else {
+        audioInstance.src = audioUrl
+      }
+
+      await audioInstance.play()
+      setIsPlaying(true)
+    } catch (err) {
+      console.error("Error playing audio:", err)
     }
   }
 
@@ -100,16 +135,16 @@ export default function BookDetailsComponent({ book }) {
         {/* Book Cover & Actions */}
         <motion.div className="md:col-span-1 flex flex-col items-center">
           <img
-            src={book.cover || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
+            src={
+              book.cover ||
+              "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"
+            }
             alt={book.title}
             className="w-full max-w-xs rounded-lg shadow-lg transition-transform duration-300 hover:scale-105"
           />
           <div className="mt-6 w-full max-w-xs space-y-4">
             {/* Language Selection Dropdown */}
-            <Select
-              value={selectedLanguage}
-              onValueChange={(value) => setSelectedLanguage(value)}
-            >
+            <Select value={selectedLanguage} onValueChange={(value) => setSelectedLanguage(value)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Language" />
               </SelectTrigger>
@@ -120,11 +155,17 @@ export default function BookDetailsComponent({ book }) {
               </SelectContent>
             </Select>
 
-            <Button
-              className="w-full hover:bg-primary/90 transition-colors duration-300"
-              onClick={handleReadNow}
-            >
+            <Button className="w-full hover:bg-primary/90 transition-colors duration-300" onClick={handleReadNow}>
               Continue Reading
+            </Button>
+
+            <Button
+              variant={isPlaying ? "secondary" : "outline"}
+              className="w-full transition-colors duration-300 flex items-center justify-center gap-2"
+              onClick={handleListenNow}
+            >
+              <Headphones className="h-4 w-4" />
+              {isPlaying ? "Pause Audio" : "Listen Now"}
             </Button>
           </div>
         </motion.div>
@@ -134,21 +175,10 @@ export default function BookDetailsComponent({ book }) {
           <div className="flex justify-between items-start mb-4">
             <div>
               <h1 className="text-3xl font-bold">{book.title}</h1>
-              <p className="text-xl text-muted-foreground mt-2">
-                {book.author_name || "Unknown Author"}
-              </p>
+              <p className="text-xl text-muted-foreground mt-2">{book.author_name || "Unknown Author"}</p>
             </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleBookmarks}
-              className="ml-4"
-            >
-              {isBookmarked ? (
-                <BookmarkCheck className="h-4 w-4 text-primary" />
-              ) : (
-                <Bookmark className="h-4 w-4" />
-              )}
+            <Button variant="outline" size="icon" onClick={handleBookmarks} className="ml-4">
+              {isBookmarked ? <BookmarkCheck className="h-4 w-4 text-primary" /> : <Bookmark className="h-4 w-4" />}
             </Button>
           </div>
 
@@ -165,32 +195,9 @@ export default function BookDetailsComponent({ book }) {
           </div>
 
           <p className="text-muted-foreground mb-8">{book.description}</p>
-
-          <div className="border-b mb-6">
-            <div className="flex gap-4">
-              <Button
-                variant="ghost"
-                className={activeTab === "reviews" ? "border-b-2 border-primary" : ""}
-                onClick={() => setActiveTab("reviews")}
-              >
-                Reviews
-              </Button>
-              <Button
-                variant="ghost"
-                className={activeTab === "comments" ? "border-b-2 border-primary" : ""}
-                onClick={() => setActiveTab("comments")}
-              >
-                Comments
-              </Button>
-            </div>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {activeTab === "reviews" && <BookReviews bookId={book.book_id} />}
-            {activeTab === "comments" && <BookComments bookId={book.book_id} />}
-          </AnimatePresence>
         </motion.div>
       </motion.div>
     </div>
   )
 }
+
