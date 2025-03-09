@@ -76,6 +76,7 @@ CREATE TABLE books (
     description TEXT,
     coverUrl TEXT NOT NULL,
     fileUrl TEXT NOT NULL,
+    audioUrl TEXT NOT NULL,
     is_public BOOLEAN DEFAULT FALSE,
     is_approved BOOLEAN DEFAULT FALSE,
     uploaded_by_role ENUM('Author', 'Publisher') NOT NULL,  
