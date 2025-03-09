@@ -23,30 +23,26 @@ class BooksModel:
 
     def fetch_book_by_id(self, book_id):
         cur = self.conn.cursor()
+        # Updated query with audioUrl
         cur.execute("""
             SELECT 
                 b.book_id, 
                 b.user_id, 
                 b.title, 
                 b.description, 
-                b.fileUrl, 
+                b.fileUrl,
+                b.audioUrl,  -- New column
                 b.is_public, 
                 b.is_approved, 
                 b.uploaded_at, 
                 b.uploaded_by_role,
-                COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories  -- Aggregate categories into a single string
-            FROM 
-                books b
-            LEFT JOIN 
-                book_category bc ON b.book_id = bc.book_id
-            LEFT JOIN 
-                categories c ON bc.category_id = c.category_id
-            WHERE 
-                b.book_id = %s
-            GROUP BY 
-                b.book_id  
-            """, (book_id,))
-        
+                COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories
+            FROM books b
+            LEFT JOIN book_category bc ON b.book_id = bc.book_id
+            LEFT JOIN categories c ON bc.category_id = c.category_id
+            WHERE b.book_id = %s
+            GROUP BY b.book_id  
+        """, (book_id,))
         book = cur.fetchone()
         cur.close()
         return book
@@ -92,7 +88,7 @@ class BooksModel:
     #     cur.close()
 
 
-    def create_book(self, user_id, title, description, file_url, is_public, is_approved, uploaded_by_role, category_ids):
+    def create_book(self, user_id, title, description, file_url, audio_url, is_public, is_approved, uploaded_by_role, category_ids):
         if isinstance(category_ids, str):
             try:
                 import ast
@@ -103,9 +99,10 @@ class BooksModel:
         with self.conn.cursor() as cur:
             try:
                 cur.execute("""
-                    INSERT INTO books (user_id, title, description, fileUrl, is_public, is_approved, uploaded_by_role) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (user_id, title, description, file_url, is_public, is_approved, uploaded_by_role))
+                    INSERT INTO books 
+                    (user_id, title, description, fileUrl, audioUrl, is_public, is_approved, uploaded_by_role) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (user_id, title, description, file_url, audio_url, is_public, is_approved, uploaded_by_role))
 
                 book_id = cur.lastrowid
                 cur.execute('INSERT INTO views(book_id,book_view) VALUES(%s,%s)', (book_id, 0))
@@ -119,7 +116,7 @@ class BooksModel:
                             """, (book_id, int(category_id)))
 
                 self.conn.commit()
-                return True
+                return book_id
             except Exception as e:
                 self.conn.rollback()
                 raise e
@@ -312,6 +309,7 @@ class BooksModel:
                     b.title, 
                     b.description, 
                     b.fileUrl, 
+                    b.audioUrl,
                     b.is_public, 
                     b.is_approved, 
                     b.uploaded_at, 

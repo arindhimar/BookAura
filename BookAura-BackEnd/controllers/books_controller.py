@@ -13,6 +13,10 @@ books_model = BooksModel()
 UPLOAD_FOLDER = 'uploads/'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+AUDIO_UPLOAD_FOLDER = 'audio_uploads/'
+os.makedirs(AUDIO_UPLOAD_FOLDER, exist_ok=True)
+
+
 def upload_file(file, title):
     """Save uploaded file with standardized naming convention"""
     if not file or not title:
@@ -27,7 +31,57 @@ def upload_file(file, title):
     
     file.save(file_path)
     trigger_translation(file_path)
+    trigger_audio_conversion(file_path)
+
     return file_path
+
+def trigger_audio_conversion(file_path):
+    """Handle audio conversion in background process"""
+    abs_file_path = os.path.abspath(file_path)
+    output_folder = os.path.abspath(AUDIO_UPLOAD_FOLDER)
+    
+    script = f"""
+import os
+import pdfplumber
+import pyttsx3
+import re
+
+def process_audio():
+    input_pdf = r"{abs_file_path}"
+    output_folder = r"{output_folder}"
+    
+    try:
+        # Generate filename
+        base_name = os.path.basename(input_pdf).replace('_en', '_audio')
+        audio_filename = f"{{base_name.split('.')[0]}}.mp3"
+        output_path = os.path.join(output_folder, audio_filename)
+        
+        # Extract text
+        text = ""
+        with pdfplumber.open(input_pdf) as pdf:
+            for page in pdf.pages:
+                if page.extract_text():
+                    text += page.extract_text() + "\\n"
+        
+        # Preprocess text
+        text = re.sub(r"([.,!?])", r"\\1 ", text)
+        text = re.sub(r"\\n+", ". \\n", text)
+        
+        # Convert to speech
+        engine = pyttsx3.init()
+        engine.setProperty('rate', 150)
+        engine.save_to_file(text, output_path)
+        engine.runAndWait()
+        
+        print(f"Audio processing completed: {{output_path}}")
+    except Exception as e:
+        print(f"Audio processing failed: {{str(e)}}")
+
+process_audio()
+    """
+    
+    subprocess.Popen(['python', '-c', script])
+
 
 def trigger_translation(file_path):
     """
@@ -127,7 +181,8 @@ print("Translation process completed.")
 '''
     # Launch the translation process in a separate process.
     subprocess.Popen(['python', '-c', script])
-
+    
+    
 @app.route('/', methods=['GET'])
 def get_all_books():
     rows = books_model.fetch_all_books()
@@ -142,7 +197,26 @@ def get_all_books():
 
 @app.route('/<int:book_id>', methods=['GET'])
 def get_book(book_id):
+    row = books_model.fetch_book_by_id(book_id)@app.route('/<int:book_id>', methods=['GET'])
+def get_book(book_id):
     row = books_model.fetch_book_by_id(book_id)
+    if row is None:
+        return jsonify({'error': 'Book not found'}), 404
+    book = {
+        'book_id': row[0],
+        'author_id': row[1],
+        'title': row[2],
+        'description': row[3],
+        'file_url': row[4],
+        'audio_url': row[5],  # New audio URL field
+        'is_public': row[6],
+        'is_approved': row[7],
+        'uploaded_at': row[8],
+        'uploaded_by_role': row[9],
+        'categories': row[10].split(', ') if row[10] else []
+    }
+    return jsonify(book)
+
     if row is None:
         return jsonify({'error': 'Book not found'}), 404
     book = {
@@ -186,13 +260,18 @@ def create_book():
     if not file_url:
         return jsonify({'error': 'File processing failed'}), 500
 
+    # Generate audio URL from file URL
+    audio_filename = os.path.basename(file_url).replace('_en', '_audio').replace('.pdf', '.mp3')
+    audio_url = os.path.join(AUDIO_UPLOAD_FOLDER, audio_filename)
+
     # Database operations
     try:
-        books_model.create_book(
+        book_id = books_model.create_book(
             user_id=int(decoded_token['user_id']),
             title=data['title'],
             description=data['description'],
             file_url=file_url,
+            audio_url=audio_url,
             is_public=data['is_public'].lower() == 'true',
             is_approved=False,
             uploaded_by_role=data['uploaded_by_role'],
@@ -201,6 +280,7 @@ def create_book():
         return jsonify({
             'message': 'Book created successfully',
             'file_url': file_url,
+            'audio_url': audio_url,
             'translations': [
                 file_url.replace('_en', '_hi'),
                 file_url.replace('_en', '_mr')
@@ -292,6 +372,19 @@ def get_pdf(filename):
         return send_from_directory(UPLOAD_FOLDER, filename.replace('_en', '_hi'))
     elif language == 'marathi':
         return send_from_directory(UPLOAD_FOLDER, filename.replace('_en', '_mr'))
+    
+    return jsonify({'error': 'Invalid language'}), 400
+
+@app.route('/audio/<filename>')
+def get_audio(filename):
+    print("asjdhasbdjhabsjdbjashgd")
+    language = request.args.get('language', default='english')
+    if language == 'english':
+        return send_from_directory(AUDIO_UPLOAD_FOLDER, filename)
+    elif language == 'hindi':
+        return send_from_directory(AUDIO_UPLOAD_FOLDER, filename.replace('_en', '_hi'))
+    elif language == 'marathi':
+        return send_from_directory(AUDIO_UPLOAD_FOLDER, filename.replace('_en', '_mr'))
     
     return jsonify({'error': 'Invalid language'}), 400
 
