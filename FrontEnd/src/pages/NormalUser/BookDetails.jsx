@@ -1,17 +1,18 @@
-import { useParams, useNavigate } from "react-router-dom"
-import { motion } from "framer-motion"
-import { Button } from "../../components/ui/button"
-import { ArrowLeft } from "lucide-react"
-import BookDetailsComponent from "../../components/BookDetailsComponent"
-import RelatedBooks from "../../components/RelatedBooks"
-import { useEffect, useState } from "react"
-import Navbar from "../../components/UserNavbar" // Import the UserNavbar component
+import { useParams, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Button } from "../../components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import BookDetailsComponent from "../../components/BookDetailsComponent";
+import RelatedBooks from "../../components/RelatedBooks";
+import { useEffect, useState } from "react";
+import Navbar from "../../components/UserNavbar"; // Import Navbar
 
 export default function BookDetails() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const [book, setBook] = useState(null)
-  const [userName, setUserName] = useState("User") // State for username
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [book, setBook] = useState(null);
+  const [relatedByAuthor, setRelatedByAuthor] = useState([]);
+  const [relatedByCategory, setRelatedByCategory] = useState([]);
 
   useEffect(() => {
     const fetchCurrentBook = async () => {
@@ -22,37 +23,27 @@ export default function BookDetails() {
             headers: { Authorization: `${localStorage.getItem("token")}` },
             method: "GET",
           }
-        )
+        );
 
-        if (!response.ok) throw new Error("Failed to fetch book data")
-        
-        const data = await response.json()
-        setBook(data.book)
+        if (!response.ok) throw new Error("Failed to fetch book data");
+
+        const data = await response.json();
+
+        setBook(data.book);
+        setRelatedByAuthor(data.related_books_by_author || []); 
+        setRelatedByCategory(data.related_books_by_category || []);
       } catch (error) {
-        console.error(error)
-        setBook(null)
+        console.error(error);
+        setBook(null);
       }
-    }
+    };
 
-    fetchCurrentBook()
-
-    const token = localStorage.getItem("token")
-    if (!token) {
-      navigate("/")
-      localStorage.clear()
-    }
-
-    // Fetch username from localStorage
-    const user = JSON.parse(localStorage.getItem("user"))
-    if (user) {
-      setUserName(user.username)
-    }
-  }, [id, navigate])
+    fetchCurrentBook();
+  }, [id, navigate]);
 
   return (
     <main className="min-h-screen flex flex-col">
-      {/* Add the UserNavbar component */}
-      <Navbar />
+      <Navbar /> {/* Include Navbar */}
 
       <motion.div
         initial={{ opacity: 0 }}
@@ -70,11 +61,12 @@ export default function BookDetails() {
           Back
         </Button>
 
-
-        {/* Book Details and Related Books */}
+        {/* Book Details */}
         <BookDetailsComponent book={book} />
-        <RelatedBooks book={book} />
+
+        {/* Pass related books to RelatedBooks component */}
+        <RelatedBooks relatedByAuthor={relatedByAuthor} relatedByCategory={relatedByCategory} />
       </motion.div>
     </main>
-  )
+  );
 }

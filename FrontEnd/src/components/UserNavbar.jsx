@@ -81,7 +81,7 @@ export default function UserNavbar() {
               </Link>
 
               <div className="hidden md:flex md:space-x-1 ml-10">
-                {["Home", "Browse", "Categories", "My Library"].map((item) => (
+                {["Home", "Categories", "My Library"].map((item) => (
                   <Link
                     key={item}
                     to={item === "Home" ? "/home" : `/${item.toLowerCase().replace(" ", "-")}`}

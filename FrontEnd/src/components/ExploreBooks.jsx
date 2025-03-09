@@ -64,14 +64,19 @@ export default function ExploreBooks() {
                     <div
                       key={book.book_id}
                       className="p-2 cursor-pointer hover:bg-primary/10 rounded-md flex items-center space-x-3"
-                      onClick={() => navigate(`/book/${book.book_id}`)}
+                      onMouseDown={() => navigate(`/book/${book.book_id}`)} // Change onClick to onMouseDown
                     >
-                      <img src={book.cover || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"} alt={book.title} className="h-10 w-10 rounded-md object-cover" />
+                      <img
+                        src={book.cover || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
+                        alt={book.title}
+                        className="h-10 w-10 rounded-md object-cover"
+                      />
                       <span className="text-sm font-medium">{book.title}</span>
                     </div>
                   ))}
                 </div>
               )}
+
             </motion.div>
             <motion.div className="mt-8 flex flex-wrap justify-center gap-4">
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
