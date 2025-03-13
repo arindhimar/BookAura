@@ -38,19 +38,33 @@ class BookmarksModel:
         bookmark = cur.fetchone()
         cur.close()
         return bookmark
-    
+        
     def fetch_bookmarks_by_user_id(self, user_id):
         cur = self.conn.cursor()
         cur.execute("""
             SELECT 
-                b.bookmark_id, 
-                b.user_id, 
-                b.book_id, 
-                b.created_at
+                bm.bookmark_id,
+                bm.user_id,
+                bm.book_id,
+                bm.created_at,
+                b.title,
+                b.description,
+                b.coverUrl,
+                b.fileUrl,
+                b.audioUrl,
+                b.is_public,
+                b.is_approved,
+                b.uploaded_at,
+                b.uploaded_by_role,
+                COALESCE(v.book_view, 0) AS book_views
             FROM 
-                bookmarks b
+                bookmarks bm
+            JOIN 
+                books b ON bm.book_id = b.book_id
+            LEFT JOIN 
+                views v ON b.book_id = v.book_id
             WHERE 
-                b.user_id = %s
+                bm.user_id = %s
             """, (user_id,))
         bookmarks = cur.fetchall()
         cur.close()
@@ -162,7 +176,6 @@ class BookmarksModel:
                 b.user_id = %s
             """, (user_id,))
         bookmarks = cur.fetchall()
-        print(cur.statement)
         cur.close()
         return bookmarks
     

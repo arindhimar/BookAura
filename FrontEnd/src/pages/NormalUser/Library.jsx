@@ -34,46 +34,77 @@ export default function Library() {
       return Promise.all(bookRequests);
     };
 
-    const fetchData = async () => {
-      setLoading(true);
+    const fetchReadingHistory = async () => {
       try {
         const token = localStorage.getItem("token");
 
-        const [historyRes, bookmarksRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_BASE_API_URL}/reading_history/user`, {
-            headers: { Authorization: `${token}` },
-          }),
-          fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/user`, {
-            headers: { Authorization: `${token}` },
-          }),
-        ]);
+        // Fetch reading history
+        const historyRes = await fetch(`${import.meta.env.VITE_BASE_API_URL}/reading_history/user`, {
+          headers: { Authorization: `${token}` },
+        });
 
-        if (!historyRes.ok || !bookmarksRes.ok) {
-          throw new Error("Failed to fetch data");
+        if (!historyRes.ok) {
+          throw new Error("Failed to fetch reading history");
         }
 
-        const [historyData, bookmarksData] = await Promise.all([
-          historyRes.json(),
-          bookmarksRes.json(),
-        ]);
+        const historyData = await historyRes.json();
 
-        // Extract book IDs
+        // Extract book IDs from history
         const historyBookIds = historyData.map((item) => item.book_id);
+
+        // Fetch book details for history
+        const historyBooks = await fetchBookDetails(historyBookIds);
+
+        // Add progress and lastRead to history books
+        const historyWithProgress = historyBooks.map((book, index) => ({
+          ...book,
+          progress: historyData[index].progress, // Assuming progress is returned in historyData
+          lastRead: historyData[index].last_read, // Assuming last_read is returned in historyData
+        }));
+
+        setHistory(historyWithProgress);
+      } catch (error) {
+        console.error("Error fetching reading history:", error);
+      }
+    };
+
+    const fetchBookmarks = async () => {
+      try {
+        const token = localStorage.getItem("token");
+
+        // Fetch bookmarks
+        const bookmarksRes = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/user`, {
+          headers: { Authorization: `${token}` },
+        });
+
+        if (!bookmarksRes.ok) {
+          throw new Error("Failed to fetch bookmarks");
+        }
+
+        const bookmarksData = await bookmarksRes.json();
+
+        // Extract book IDs from bookmarks
         const bookmarksBookIds = bookmarksData.map((item) => item.book_id);
 
-        // Fetch book details
-        const [historyBooks, bookmarkBooks] = await Promise.all([
-          fetchBookDetails(historyBookIds),
-          fetchBookDetails(bookmarksBookIds),
-        ]);
+        // Fetch book details for bookmarks
+        const bookmarkBooks = await fetchBookDetails(bookmarksBookIds);
 
-        setHistory(historyBooks);
         setBookmarks(bookmarkBooks);
       } catch (error) {
-        console.error("Error fetching library data:", error);
-      } finally {
-        setLoading(false);
+        console.error("Error fetching bookmarks:", error);
       }
+    };
+
+    const fetchData = async () => {
+      setLoading(true);
+
+      // First, fetch reading history
+      await fetchReadingHistory();
+
+      // Then, fetch bookmarks
+      await fetchBookmarks();
+
+      setLoading(false);
     };
 
     fetchData();
@@ -155,7 +186,7 @@ function BookGrid({ books, loading, title, navigate }) {
               <h3 className="text-lg font-semibold group-hover:text-primary transition-colors duration-300">
                 {book.title}
               </h3>
-              <p className="text-sm text-muted-foreground">{book.author}</p>
+              <p className="text-sm text-muted-foreground">{book.author_name || "Unknown Author"}</p>
               {book.progress && (
                 <div className="mt-2 flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{book.progress}% complete</span>

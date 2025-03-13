@@ -1,108 +1,163 @@
-import { Card } from "./ui/card";
-import { Button } from "./ui/button";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { BookOpen, Clock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Card, CardContent } from "./ui/card"
+import { Button } from "./ui/button"
+import { useNavigate } from "react-router-dom"
+import { motion } from "framer-motion"
+import { Eye, MoreVertical, Bookmark, BookmarkCheck, Share, Heart } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
+import { useState, useEffect } from "react"
 
-export default function Recommendations() {
-  const [hoveredBook, setHoveredBook] = useState(null)
-  const [recommendedBooks,setRecommendedBooks] = useState([]);
+export default function Recommendations({ books, loading }) {
+  const navigate = useNavigate()
 
+  if (loading) {
+    return (
+      <section className="my-12">
+        <h2 className="text-2xl font-bold mb-6">Recommended For You</h2>
+        <p className="text-muted-foreground">Loading recommendations...</p>
+      </section>
+    )
+  }
 
-  useEffect(() => {
-    const fetchRecommendedBooks = async () => {
-      // const response = await fetch(import.meta.env.VITE_BASE_API_URL + "/books/unread/user", {
-      const response = await fetch(import.meta.env.VITE_BASE_API_URL + "/books/", {
-
-        headers: {
-          "Authorization": `${localStorage.getItem("token")}`
-        },
-        method: "GET",
-      }
-      );
-      const data = await response.json();
-      setRecommendedBooks(data);
-    }
-    fetchRecommendedBooks();
-  }, [])
+  if (books.length === 0) {
+    return (
+      <section className="my-12">
+        <h2 className="text-2xl font-bold mb-6">Recommended For You</h2>
+        <p className="text-muted-foreground">No recommendations available yet. Try exploring more books!</p>
+      </section>
+    )
+  }
 
   return (
-    <motion.section
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.4, duration: 0.5 }}
-      className="mb-12"
-    >
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-3xl font-bold text-gradient">Recommended for You</h2>
-        <Button variant="ghost" className="text-primary hover:text-primary/80">
-          View All
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {recommendedBooks.map((book, index) => (
-          <motion.div
-            key={book.book_id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 * index, duration: 0.5 }}
-          >
-            <Link to={`/book/${book.book_id}`}>
-              <Card className="modern-card group cursor-pointer">
-                <div className="relative w-full aspect-[3/4] overflow-hidden rounded-xl">
-                  <img
-                    src={book.cover || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
-                    alt={book.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="absolute bottom-0 left-0 right-0 p-2 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 text-xs">
-                    <p className="flex items-center">
-                      <Clock className="w-3 h-3 mr-1" />
-                      {book.timeLeft}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="p-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-sm font-semibold group-hover:text-primary transition-colors duration-300">
-                        {book.title}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">{book.author}</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="bg-primary/10 hover:bg-primary/20 text-primary rounded-full h-7 w-7 p-0"
-                    >
-                      <BookOpen className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-
-                  <div className="mt-2 space-y-1">
-                    <p className="text-xs text-muted-foreground">{book.chapter}</p>
-                    <div className="relative h-1.5 rounded-full bg-secondary overflow-hidden">
-                      <motion.div
-                        className="absolute top-0 left-0 h-full bg-gradient rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${book.progress}%` }}
-                        transition={{ delay: 0.5, duration: 0.5 }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[10px] text-muted-foreground">
-                      <span>{book.progress}% completed</span>
-                      <span>{100 - book.progress}% left</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </Link>
-          </motion.div>
+    <section className="my-12">
+      <h2 className="text-2xl font-bold mb-6">Recommended For You</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {books.map((book, index) => (
+          <BookCard key={book.book_id} book={book} index={index} />
         ))}
       </div>
-    </motion.section>
-  );
+    </section>
+  )
+}
+
+function BookCard({ book, index }) {
+  const [isBookmarked, setIsBookmarked] = useState(false)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const checkBookmarkStatus = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`, {
+          headers: { Authorization: `${localStorage.getItem("token")}` },
+          method: "GET",
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setIsBookmarked(data.is_bookmarked)
+        }
+      } catch (error) {
+        console.error("Error checking bookmark status:", error)
+      }
+    }
+
+    checkBookmarkStatus()
+  }, [book])
+
+  const handleBookmark = async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    try {
+      const method = isBookmarked ? "DELETE" : "POST"
+      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `${localStorage.getItem("token")}`,
+        },
+      })
+
+      if (!response.ok) throw new Error("Bookmark update failed")
+      setIsBookmarked(!isBookmarked)
+    } catch (error) {
+      console.error("Error updating bookmark:", error)
+    }
+  }
+
+  const shareBook = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const url = `${window.location.origin}/book/${book.book_id}`
+    navigator.clipboard.writeText(url)
+    alert("Link copied to clipboard!")
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+      className="group"
+    >
+      <Card className="cursor-pointer relative" onClick={() => navigate(`/book/${book.book_id}`)}>
+        <div className="absolute top-2 right-2 z-10 flex space-x-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 bg-black/30 hover:bg-black/50 text-white"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={handleBookmark}>
+                {isBookmarked ? (
+                  <>
+                    <BookmarkCheck className="h-4 w-4 mr-2 text-primary" />
+                    <span>Remove Bookmark</span>
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="h-4 w-4 mr-2" />
+                    <span>Add to Bookmarks</span>
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={shareBook}>
+                <Share className="h-4 w-4 mr-2" />
+                <span>Share</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Heart className="h-4 w-4 mr-2" />
+                <span>Add to Favorites</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className="relative aspect-[3/4] overflow-hidden">
+          <img
+            src={
+              book.cover ||
+              "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"
+            }
+            alt={book.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        </div>
+        <CardContent className="p-4">
+          <h3 className="font-semibold mb-1 line-clamp-1">{book.title}</h3>
+          <p className="text-sm text-muted-foreground mb-1 line-clamp-1">{book.author_name || "Unknown Author"}</p>
+          <div className="flex items-center text-muted-foreground mb-2">
+            <Eye className="h-3 w-3 mr-1" />
+            <span className="text-xs">{book.views || 0} views</span>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
 }

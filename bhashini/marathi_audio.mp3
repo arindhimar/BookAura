@@ -1,0 +1,1 @@
+{"detail":"API Error: HTTPSConnectionPool(host='api.bhashini.gov.in', port=443): Max retries exceeded with url: /tts (Caused by NameResolutionError(\"<urllib3.connection.HTTPSConnection object at 0x000001CB8B19BD30>: Failed to resolve 'api.bhashini.gov.in' ([Errno 11001] getaddrinfo failed)\"))"}

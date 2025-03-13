@@ -37,3 +37,8 @@ def update_view(book_id):
 def delete_view(book_id):
     books_views_model.delete_view(book_id)
     return jsonify({'message': 'View deleted successfully'}), 200
+
+@app.route('/book/<int:book_id>/view', methods=['POST'])
+def add_view_by_book_id(book_id):
+    books_views_model.add_view(book_id)
+    return jsonify({'message': 'View added successfully'}), 201

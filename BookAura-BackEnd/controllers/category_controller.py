@@ -43,3 +43,9 @@ def delete_category(category_id):
     categories_model.delete_category(category_id)
     return jsonify({'message': 'Category deleted successfully'}), 200
 
+
+@app.route('/books', methods=['GET'])
+def get_all_books_category_wise():
+    category_wise_books = categories_model.fetch_books_category_wise()
+    
+    return jsonify(category_wise_books), 200

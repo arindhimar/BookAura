@@ -46,10 +46,29 @@ def get_bookmarks_by_user():
 
     user_id = decoded_token['user_id']
 
-    bookmarks = bookmarks_model.fetch_bookmarks_by_user(user_id)
+    bookmarks = bookmarks_model.fetch_bookmarks_by_user_id(user_id)
 
-    bookmarks = [{'bookmark_id': row[0], 'user_id': row[1], 'book_id': row[2]} for row in bookmarks]
-    return jsonify(bookmarks)
+    # Format the response to include book details and categories
+    bookmarks_response = [{
+        'bookmark_id': row[0],
+        'user_id': row[1],
+        'book_id': row[2],
+        'created_at': row[3],
+        'book_details': {
+            'title': row[4],
+            'description': row[5],
+            'coverUrl': row[6],
+            'fileUrl': row[7],
+            'audioUrl': row[8],
+            'is_public': row[9],
+            'is_approved': row[10],
+            'uploaded_by_role': row[11],
+            'uploaded_at': row[12],
+            'views': row[13],
+        }
+    } for row in bookmarks]
+
+    return jsonify(bookmarks_response)
 
 @app.route('/book/<int:book_id>', methods=['GET'])
 def get_bookmarks_by_book(book_id):
@@ -104,3 +123,5 @@ def delete_bookmark_by_book_and_user(book_id):
 
     bookmarks_model.delete_bookmark_by_book_and_user(user_id, book_id)
     return jsonify({'message': 'Bookmark deleted successfully'}), 200
+
+

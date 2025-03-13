@@ -7,8 +7,7 @@ import { ScrollArea } from "../../components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
 
 export default function Categories() {
-  const [categories, setCategories] = useState([]);
-  const [categoryBooks, setCategoryBooks] = useState({});
+  const [categoriesWithBooks, setCategoriesWithBooks] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedCategory, setExpandedCategory] = useState(null);
@@ -16,29 +15,24 @@ export default function Categories() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchCategoriesWithBooks = async () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) {
           throw new Error("User not authenticated");
         }
 
-        const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/categories/`, {
+        const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/categories/books`, {
           headers: { Authorization: token },
           method: "GET",
         });
 
         if (!response.ok) {
-          throw new Error("Failed to fetch categories");
+          throw new Error("Failed to fetch categories and books");
         }
 
         const data = await response.json();
-        setCategories(data);
-
-        // Fetch books for each category
-        data.forEach((category) => {
-          fetchCategoryBooks(category.category_id);
-        });
+        setCategoriesWithBooks(data);
       } catch (error) {
         console.error(error);
         setError(error.message);
@@ -53,46 +47,23 @@ export default function Categories() {
         navigate("/");
         localStorage.clear();
       }
-      fetchCategories();
+      fetchCategoriesWithBooks();
     };
 
     validateUser();
   }, []);
 
-  const fetchCategoryBooks = async (categoryId) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/category/${categoryId}`, {
-        headers: { Authorization: token },
-        method: "GET",
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch books for category ${categoryId}`);
-      }
-
-      const data = await response.json();
-      setCategoryBooks((prev) => ({
-        ...prev,
-        [categoryId]: data,
-      }));
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
   const handleBookClick = (book) => {
-    console.log(book)
     setSelectedBook(selectedBook?.book_id === book.book_id ? null : book);
     navigate(`/book/${book.book_id}`);
   };
 
-  const handleCategoryClick = (categoryId) => {
-    if (expandedCategory === categoryId) {
+  const handleCategoryClick = (categoryName) => {
+    if (expandedCategory === categoryName) {
       setExpandedCategory(null);
       setSelectedBook(null);
     } else {
-      setExpandedCategory(categoryId);
+      setExpandedCategory(categoryName);
     }
   };
 
@@ -128,20 +99,20 @@ export default function Categories() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {categories.map((category, index) => (
+          {Object.entries(categoriesWithBooks).map(([categoryName, books], index) => (
             <motion.div
-              key={category.category_id}
+              key={categoryName}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               className="group cursor-pointer"
-              onClick={() => handleCategoryClick(category.category_id)}
+              onClick={() => handleCategoryClick(categoryName)}
             >
               <div className="modern-card relative overflow-hidden p-6">
-                <h3 className="text-xl font-semibold">{category.category_name}</h3>
+                <h3 className="text-xl font-semibold">{categoryName}</h3>
 
                 <AnimatePresence>
-                  {expandedCategory === category.category_id && categoryBooks[category.category_id]?.length > 0 && (
+                  {expandedCategory === categoryName && books.length > 0 && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
@@ -151,13 +122,12 @@ export default function Categories() {
                     >
                       <ScrollArea className="h-[300px] rounded-md border p-4">
                         <div className="grid grid-cols-2 gap-4">
-                          {categoryBooks[category.category_id].map((book) => (
+                          {books.map((book) => (
                             <motion.div
                               key={book.book_id}
                               className={`relative cursor-pointer ${
                                 selectedBook?.book_id === book.book_id ? "scale-110 shadow-lg" : "scale-100"
                               } transition-transform duration-300`}
-                              
                             >
                               <img
                                 src={book.cover || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}

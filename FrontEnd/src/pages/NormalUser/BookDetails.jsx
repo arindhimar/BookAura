@@ -15,6 +15,12 @@ export default function BookDetails() {
   const [relatedByCategory, setRelatedByCategory] = useState([]);
 
   useEffect(() => {
+
+    if(!localStorage.getItem("token")) {
+      navigate("/");
+      return;
+    }
+
     const fetchCurrentBook = async () => {
       try {
         const response = await fetch(
@@ -43,7 +49,7 @@ export default function BookDetails() {
 
   return (
     <main className="min-h-screen flex flex-col">
-      <Navbar /> {/* Include Navbar */}
+      <Navbar /> 
 
       <motion.div
         initial={{ opacity: 0 }}

@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table"
 import { Button } from "../../components/ui/button"
@@ -22,7 +24,8 @@ export default function ManageBooks() {
     category_ids: [],
     is_public: false,
     file: null,
-    uploaded_by_role: "Publisher"
+    coverUrl: "",
+    uploaded_by_role: "Publisher",
   })
   const [editingBook, setEditingBook] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -102,7 +105,15 @@ export default function ManageBooks() {
       }
       await fetchBooks()
       setIsAddBookOpen(false)
-      setNewBook({ title: "", description: "", category_ids: [], is_public: false, file: null, uploaded_by_role: "Publisher" })
+      setNewBook({
+        title: "",
+        description: "",
+        category_ids: [],
+        is_public: false,
+        file: null,
+        coverUrl: "",
+        uploaded_by_role: "Publisher",
+      })
       toast.success("Book added successfully")
     } catch (error) {
       toast.error(error.message)
@@ -283,6 +294,37 @@ export default function ManageBooks() {
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="coverUrl" className="text-right">
+                  Cover Image
+                </Label>
+                <div className="col-span-3 space-y-2">
+                  <Input
+                    id="coverUrl"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setNewBook({ ...newBook, coverUrl: e.target.files[0] })}
+                    className="col-span-3"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Upload a high-quality cover image (recommended size: 600x900px). A good cover significantly
+                    increases reader interest. Use JPG or PNG format with clear, attractive visuals that represent your
+                    book's content.
+                  </p>
+                  {newBook.coverUrl && (
+                    <div className="mt-2">
+                      <p className="text-sm font-medium mb-1">Preview:</p>
+                      <img
+                        src={
+                          newBook.coverUrl instanceof File ? URL.createObjectURL(newBook.coverUrl) : newBook.coverUrl
+                        }
+                        alt="Cover preview"
+                        className="h-40 object-cover rounded-md border border-border"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="file" className="text-right">
                   File
                 </Label>
@@ -358,6 +400,39 @@ export default function ManageBooks() {
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-coverUrl" className="text-right">
+                  Cover Image
+                </Label>
+                <div className="col-span-3 space-y-2">
+                  <Input
+                    id="edit-coverUrl"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setEditingBook({ ...editingBook, coverUrl: e.target.files[0] })}
+                    className="col-span-3"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Upload a high-quality cover image (recommended size: 600x900px). A good cover significantly
+                    increases reader interest. Use JPG or PNG format with clear, attractive visuals that represent your
+                    book's content.
+                  </p>
+                  {editingBook?.coverUrl && (
+                    <div className="mt-2">
+                      <p className="text-sm font-medium mb-1">Current cover:</p>
+                      <img
+                        src={
+                          editingBook.coverUrl instanceof File
+                            ? URL.createObjectURL(editingBook.coverUrl)
+                            : editingBook.coverUrl
+                        }
+                        alt="Cover preview"
+                        className="h-40 object-cover rounded-md border border-border"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-file" className="text-right">
                   File
                 </Label>
@@ -388,3 +463,4 @@ export default function ManageBooks() {
     </div>
   )
 }
+

@@ -81,7 +81,7 @@ export default function ExploreBooks() {
             <motion.div className="mt-8 flex flex-wrap justify-center gap-4">
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <TrendingUp className="h-4 w-4" />
-                <span>100k+ Books</span>
+                <span>100+ Books</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" />

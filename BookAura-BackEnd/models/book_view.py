@@ -35,8 +35,15 @@ class BooksViewsModel:
         return book
     
     def add_view(self,book_id):
+        #first check if daata already exists in the table if yes then update the view count else insert new record
         cur = self.conn.cursor()
-        cur.execute("UPDATE views SET book_view = book_view + 1 WHERE book_id = %s",(book_id,))
+        cur.execute("SELECT * FROM views WHERE book_id = %s",(book_id,))
+        book = cur.fetchone()
+        if book is None:
+            cur.execute("INSERT INTO views (book_id, book_view) VALUES (%s, 1)",(book_id,))
+        else:
+            cur.execute("UPDATE views SET book_view = book_view + 1 WHERE book_id = %s",(book_id,))
+        
         self.conn.commit()
         cur.close()
         return True

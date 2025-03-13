@@ -187,52 +187,47 @@ print("Translation process completed.")
 def get_all_books():
     rows = books_model.fetch_all_books()
     books = [{
-        'book_id': row[0],
-        'author_id': row[1],
-        'title': row[2],
-        'description': row[3],
-        'uploaded_by_role': row[8]
+        'book_id': row['book_id'],
+        'author_id': row['author_id'],
+        'author_name': row['author_name'],
+        'title': row['title'],
+        'description': row['description'],
+        'file_url': row['fileUrl'],
+        'audio_url': row['audioUrl'],
+        'is_public': row['is_public'],
+        'is_approved': row['is_approved'],
+        'uploaded_at': row['uploaded_at'],
+        'uploaded_by_role': row['uploaded_by_role'],
+        'categories': row['categories'].split(', ') if row['categories'] else [],
+        'views': row['views']  # Include book views
     } for row in rows]
     return jsonify(books)
 
+
+
 @app.route('/<int:book_id>', methods=['GET'])
-def get_book(book_id):
-    row = books_model.fetch_book_by_id(book_id)@app.route('/<int:book_id>', methods=['GET'])
 def get_book(book_id):
     row = books_model.fetch_book_by_id(book_id)
     if row is None:
         return jsonify({'error': 'Book not found'}), 404
-    book = {
-        'book_id': row[0],
-        'author_id': row[1],
-        'title': row[2],
-        'description': row[3],
-        'file_url': row[4],
-        'audio_url': row[5],  # New audio URL field
-        'is_public': row[6],
-        'is_approved': row[7],
-        'uploaded_at': row[8],
-        'uploaded_by_role': row[9],
-        'categories': row[10].split(', ') if row[10] else []
-    }
-    return jsonify(book)
 
-    if row is None:
-        return jsonify({'error': 'Book not found'}), 404
+    # Structure the book data
     book = {
-        'book_id': row[0],
-        'author_id': row[1],
-        'title': row[2],
-        'description': row[3],
-        'file_url': row[4],
-        'is_public': row[5],
-        'is_approved': row[6],
-        'uploaded_at': row[7],
-        'uploaded_by_role': row[8],
-        'categories': row[9].split(', ') if row[9] else []
+        'book_id': row['book_id'],
+        'author_id': row['author_id'],
+        'author_name': row['author_name'],  
+        'title': row['title'],
+        'description': row['description'],
+        'file_url': row['fileUrl'],
+        'audio_url': row['audioUrl'],
+        'is_public': row['is_public'],
+        'is_approved': row['is_approved'],
+        'uploaded_at': row['uploaded_at'],
+        'uploaded_by_role': row['uploaded_by_role'],
+        'categories': row['categories'].split(', ') if row['categories'] else []
     }
-    return jsonify(book)
 
+    return jsonify(book)
 @app.route('/', methods=['POST'])
 def create_book():
     if 'file' not in request.files:
@@ -419,13 +414,22 @@ def get_book_author(book_id):
 def search_books(query):
     rows = books_model.search_books(query)
     books = [{
-        'book_id': row[0],
-        'author_id': row[1],
-        'title': row[2],
-        'description': row[3],
-        'uploaded_by_role': row[8]
+        'book_id': row['book_id'],
+        'author_id': row['author_id'],
+        'author_name': row['author_name'],
+        'title': row['title'],
+        'description': row['description'],
+        'file_url': row['fileUrl'],
+        'audio_url': row['audioUrl'],
+        'is_public': row['is_public'],
+        'is_approved': row['is_approved'],
+        'uploaded_at': row['uploaded_at'],
+        'uploaded_by_role': row['uploaded_by_role'],
+        'categories': row['categories'].split(', ') if row['categories'] else [],
+        'views': row['views']  # Include book views
     } for row in rows]
     return jsonify(books)
+
 
 @app.route('/category/<int:category_id>', methods=['GET'])
 def get_books_by_category(category_id):
@@ -436,9 +440,14 @@ def get_books_by_category(category_id):
         'author_name': row['author_name'],
         'title': row['title'],
         'description': row['description'],
-        'fileUrl': row['fileUrl'],
+        'file_url': row['fileUrl'],
+        'audio_url': row['audioUrl'],
+        'is_public': row['is_public'],
+        'is_approved': row['is_approved'],
+        'uploaded_at': row['uploaded_at'],
         'uploaded_by_role': row['uploaded_by_role'],
-        'categories': row['categories'].split(', ') if row['categories'] else []
+        'categories': row['categories'].split(', ') if row['categories'] else [],
+        'views': row['views']  # Include book views
     } for row in rows]
     return jsonify(books)
 
@@ -464,20 +473,22 @@ def get_books_by_publisher():
         return jsonify({'error': 'Invalid token'}), 401
     
     publisher_id = user['user_id']
-    
     rows = books_model.fetch_books_by_publisher(publisher_id)
     
     books = [{
-        'book_id': row[0],
-        'author_id': row[1],
-        'title': row[2],
-        'description': row[3],
-        'fileUrl': row[4],
-        'is_public': row[5],
-        'is_approved': row[6],
-        'uploaded_at': row[7],
-        'uploaded_by_role': row[8],
-        'categories': row[9] 
+        'book_id': row['book_id'],
+        'author_id': row['author_id'],
+        'author_name': row['author_name'],
+        'title': row['title'],
+        'description': row['description'],
+        'file_url': row['fileUrl'],
+        'audio_url': row['audioUrl'],
+        'is_public': row['is_public'],
+        'is_approved': row['is_approved'],
+        'uploaded_at': row['uploaded_at'],
+        'uploaded_by_role': row['uploaded_by_role'],
+        'categories': row['categories'].split(', ') if row['categories'] else [],
+        'views': row['views']  # Include book views
     } for row in rows]
     
     return jsonify(books)
