@@ -1,0 +1,106 @@
+@startuml
+entity Role {
+  *role_id: INT
+  *role_name: VARCHAR(50)
+}
+
+entity User {
+  *user_id: INT
+  *username: VARCHAR(50)
+  *email: VARCHAR(100)
+  *password_hash: VARCHAR(255)
+  *role_id: INT
+  *created_at: TIMESTAMP
+  *updated_at: TIMESTAMP
+}
+
+entity PlatformAdministrator {
+  *admin_id: INT
+  *user_id: INT
+}
+
+entity Moderator {
+  *moderator_id: INT
+  *user_id: INT
+  *is_flagged: BOOLEAN
+}
+
+entity Publisher {
+  *publisher_id: INT
+  *user_id: INT
+  *is_flagged: BOOLEAN
+}
+
+entity Author {
+  *author_id: INT
+  *user_id: INT
+  *bio: TEXT
+  *is_verified: BOOLEAN
+  *is_flagged: BOOLEAN
+  *is_approved: BOOLEAN
+}
+
+entity NormalUser {
+  *normal_user_id: INT
+  *user_id: INT
+  *additional_info: TEXT
+  *is_flagged: BOOLEAN
+}
+
+entity Book {
+  *book_id: INT
+  *author_id: INT
+  *title: VARCHAR(255)
+  *description: TEXT
+  *content: TEXT
+  *is_public: BOOLEAN
+  *is_approved: BOOLEAN
+  *uploaded_at: TIMESTAMP
+}
+
+entity Bookmark {
+  *bookmark_id: INT
+  *user_id: INT
+  *book_id: INT
+  *created_at: TIMESTAMP
+}
+
+entity AudioRequest {
+  *request_id: INT
+  *user_id: INT
+  *book_id: INT
+  *language: ENUM('English', 'Hindi', 'Marathi')
+  *requested_at: TIMESTAMP
+}
+
+entity ReadingHistory {
+  *history_id: INT
+  *user_id: INT
+  *book_id: INT
+  *last_read_at: TIMESTAMP
+}
+
+entity Report {
+  *report_id: INT
+  *user_id: INT
+  *book_id: INT
+  *reason: TEXT
+  *reported_at: TIMESTAMP
+}
+
+Role ||--o{ User : "role_id"
+User ||--o{ PlatformAdministrator : "user_id"
+User ||--o{ Moderator : "user_id"
+User ||--o{ Publisher : "user_id"
+User ||--o{ Author : "user_id"
+User ||--o{ NormalUser : "user_id"
+Author ||--o{ Book : "author_id"
+User ||--o{ Bookmark : "user_id"
+Book ||--o{ Bookmark : "book_id"
+User ||--o{ AudioRequest : "user_id"
+Book ||--o{ AudioRequest : "book_id"
+User ||--o{ ReadingHistory : "user_id"
+Book ||--o{ ReadingHistory : "book_id"
+User ||--o{ Report : "user_id"
+Book ||--o{ Report : "book_id"
+@enduml
