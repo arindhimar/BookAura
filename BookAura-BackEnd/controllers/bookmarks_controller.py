@@ -50,26 +50,29 @@ def get_bookmarks_by_user():
 
     # Format the response to include book details and categories
     bookmarks_response = [{
-        'bookmark_id': row[0],
-        'user_id': row[1],
-        'book_id': row[2],
-        'created_at': row[3],
+        'bookmark_id': row['bookmark_id'],
+        'user_id': row['user_id'],
+        'book_id': row['book_id'],
+        'created_at': row['created_at'],
         'book_details': {
-            'title': row[4],
-            'description': row[5],
-            'coverUrl': row[6],
-            'fileUrl': row[7],
-            'audioUrl': row[8],
-            'is_public': row[9],
-            'is_approved': row[10],
-            'uploaded_by_role': row[11],
-            'uploaded_at': row[12],
-            'views': row[13],
+            'book_id': row['book_book_id'],
+            'author_id': row['author_id'],
+            'author_name': row['author_name'],
+            'title': row['title'],
+            'description': row['description'],
+            'coverUrl': row['coverUrl'],
+            'fileUrl': row['fileUrl'],
+            'audioUrl': row['audioUrl'],
+            'is_public': row['is_public'],
+            'is_approved': row['is_approved'],
+            'uploaded_by_role': row['uploaded_by_role'],
+            'uploaded_at': row['uploaded_at'],
+            'views': row['views'],
+            'categories': row['categories'],  # Include categories
         }
     } for row in bookmarks]
 
     return jsonify(bookmarks_response)
-
 @app.route('/book/<int:book_id>', methods=['GET'])
 def get_bookmarks_by_book(book_id):
     bookmarks = bookmarks_model.fetch_bookmarks_by_book(book_id)

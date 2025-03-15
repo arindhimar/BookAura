@@ -22,18 +22,6 @@ export default function Library() {
       navigate("/");
     }
 
-    const fetchBookDetails = async (bookIds) => {
-      const token = localStorage.getItem("token");
-
-      const bookRequests = bookIds.map((bookId) =>
-        fetch(`${import.meta.env.VITE_BASE_API_URL}/books/${bookId}`, {
-          headers: { Authorization: `${token}` },
-        }).then((res) => res.json())
-      );
-
-      return Promise.all(bookRequests);
-    };
-
     const fetchReadingHistory = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -49,20 +37,14 @@ export default function Library() {
 
         const historyData = await historyRes.json();
 
-        // Extract book IDs from history
-        const historyBookIds = historyData.map((item) => item.book_id);
-
-        // Fetch book details for history
-        const historyBooks = await fetchBookDetails(historyBookIds);
-
-        // Add progress and lastRead to history books
-        const historyWithProgress = historyBooks.map((book, index) => ({
-          ...book,
-          progress: historyData[index].progress, // Assuming progress is returned in historyData
-          lastRead: historyData[index].last_read, // Assuming last_read is returned in historyData
+        // Map the response to match the expected format
+        const formattedHistory = historyData.map((historyItem) => ({
+          ...historyItem.book_details, // Spread book details
+          history_id: historyItem.history_id,
+          last_read_at: historyItem.last_read_at,
         }));
 
-        setHistory(historyWithProgress);
+        setHistory(formattedHistory);
       } catch (error) {
         console.error("Error fetching reading history:", error);
       }
@@ -73,7 +55,7 @@ export default function Library() {
         const token = localStorage.getItem("token");
 
         // Fetch bookmarks
-        const bookmarksRes = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/user`, {
+        const bookmarksRes = await fetch(`${import.meta.env.VITE_BASE_API_URL}/user`, {
           headers: { Authorization: `${token}` },
         });
 
@@ -83,13 +65,14 @@ export default function Library() {
 
         const bookmarksData = await bookmarksRes.json();
 
-        // Extract book IDs from bookmarks
-        const bookmarksBookIds = bookmarksData.map((item) => item.book_id);
+        // Map the response to match the expected format
+        const formattedBookmarks = bookmarksData.map((bookmark) => ({
+          ...bookmark.book_details, // Spread book details
+          bookmark_id: bookmark.bookmark_id,
+          created_at: bookmark.created_at,
+        }));
 
-        // Fetch book details for bookmarks
-        const bookmarkBooks = await fetchBookDetails(bookmarksBookIds);
-
-        setBookmarks(bookmarkBooks);
+        setBookmarks(formattedBookmarks);
       } catch (error) {
         console.error("Error fetching bookmarks:", error);
       }
@@ -98,11 +81,8 @@ export default function Library() {
     const fetchData = async () => {
       setLoading(true);
 
-      // First, fetch reading history
-      await fetchReadingHistory();
-
-      // Then, fetch bookmarks
-      await fetchBookmarks();
+      // Fetch reading history and bookmarks
+      await Promise.all([fetchReadingHistory(), fetchBookmarks()]);
 
       setLoading(false);
     };
@@ -171,28 +151,18 @@ function BookGrid({ books, loading, title, navigate }) {
               onClick={() => navigate(`/book/${book.book_id}`)}
             >
               <img
-                src={book.cover || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
+                src={book.coverUrl || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
                 alt={book.title}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              {book.progress && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200">
-                  <div className="h-full bg-gradient" style={{ width: `${book.progress}%` }} />
-                </div>
-              )}
             </div>
             <div className="p-4">
               <h3 className="text-lg font-semibold group-hover:text-primary transition-colors duration-300">
                 {book.title}
               </h3>
               <p className="text-sm text-muted-foreground">{book.author_name || "Unknown Author"}</p>
-              {book.progress && (
-                <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{book.progress}% complete</span>
-                  <span className="text-muted-foreground">{book.lastRead}</span>
-                </div>
-              )}
+              {/* <p className="text-sm text-muted-foreground">{book.description || "No description available"}</p> */}
             </div>
           </div>
         </motion.div>

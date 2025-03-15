@@ -40,36 +40,48 @@ class BookmarksModel:
         return bookmark
         
     def fetch_bookmarks_by_user_id(self, user_id):
-        cur = self.conn.cursor()
-        cur.execute("""
-            SELECT 
-                bm.bookmark_id,
-                bm.user_id,
-                bm.book_id,
-                bm.created_at,
-                b.title,
-                b.description,
-                b.coverUrl,
-                b.fileUrl,
-                b.audioUrl,
-                b.is_public,
-                b.is_approved,
-                b.uploaded_at,
-                b.uploaded_by_role,
-                COALESCE(v.book_view, 0) AS book_views
-            FROM 
-                bookmarks bm
-            JOIN 
-                books b ON bm.book_id = b.book_id
-            LEFT JOIN 
-                views v ON b.book_id = v.book_id
-            WHERE 
-                bm.user_id = %s
+        with self.conn.cursor(dictionary=True) as cur:
+            cur.execute("""
+                SELECT 
+                    bm.bookmark_id,
+                    bm.user_id,
+                    bm.book_id,
+                    bm.created_at,
+                    b.book_id AS book_book_id, 
+                    b.user_id AS author_id, 
+                    u.username AS author_name, 
+                    b.title, 
+                    b.description, 
+                    b.coverUrl, 
+                    b.fileUrl, 
+                    b.audioUrl,
+                    b.is_public, 
+                    b.is_approved, 
+                    b.uploaded_at, 
+                    b.uploaded_by_role,
+                    COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
+                    COALESCE(v.book_view, 0) AS views  -- Include book views
+                FROM 
+                    bookmarks bm
+                LEFT JOIN 
+                    books b ON bm.book_id = b.book_id
+                LEFT JOIN 
+                    book_category bc ON b.book_id = bc.book_id
+                LEFT JOIN 
+                    categories c ON bc.category_id = c.category_id
+                LEFT JOIN 
+                    users u ON b.user_id = u.user_id  -- Join with users table to get author_name
+                LEFT JOIN 
+                    views v ON b.book_id = v.book_id  -- Join the views table
+                WHERE 
+                    bm.user_id = %s
+                GROUP BY 
+                    bm.bookmark_id, bm.user_id, bm.book_id, bm.created_at, 
+                    b.book_id, b.user_id, u.username, b.title, b.description, b.coverUrl, b.fileUrl, b.audioUrl, 
+                    b.is_public, b.is_approved, b.uploaded_at, b.uploaded_by_role, v.book_view
             """, (user_id,))
-        bookmarks = cur.fetchall()
-        cur.close()
-        return bookmarks
-    
+            bookmarks = cur.fetchall()
+            return bookmarks
     def fetch_bookmarks_by_book_id(self, book_id):
         cur = self.conn.cursor()
         cur.execute("""

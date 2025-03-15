@@ -145,13 +145,13 @@ export default function Categories() {
                           ))}
                         </div>
                       </ScrollArea>
-                      <Button
+                      {/* <Button
                         variant="ghost"
                         className="w-full mt-4 text-primary"
                         onClick={() => navigate(`/books/${selectedBook?.book_id}`)}
                       >
                         View Details <ChevronRight className="ml-2 h-4 w-4" />
-                      </Button>
+                      </Button> */}
                     </motion.div>
                   )}
                 </AnimatePresence>

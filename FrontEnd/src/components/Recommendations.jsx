@@ -60,7 +60,7 @@ function BookCard({ book, index }) {
       }
     }
 
-    checkBookmarkStatus()
+    // checkBookmarkStatus()
   }, [book])
 
   const handleBookmark = async (e) => {
@@ -101,7 +101,7 @@ function BookCard({ book, index }) {
       className="group"
     >
       <Card className="cursor-pointer relative" onClick={() => navigate(`/book/${book.book_id}`)}>
-        <div className="absolute top-2 right-2 z-10 flex space-x-1">
+        {/* <div className="absolute top-2 right-2 z-10 flex space-x-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -137,7 +137,7 @@ function BookCard({ book, index }) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
+        </div> */}
 
         <div className="relative aspect-[3/4] overflow-hidden">
           <img

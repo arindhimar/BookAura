@@ -465,8 +465,8 @@ class BooksModel:
                     b.is_approved, 
                     b.uploaded_at, 
                     b.uploaded_by_role,
-                    COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
-                    v.book_view AS views  -- Include book views
+                    COALESCE(GROUP_CONCAT(DISTINCT c.category_name SEPARATOR ', '), '') AS categories,
+                    COALESCE(SUM(v.book_view), 0) AS views  -- Aggregate book views
                 FROM 
                     books b
                 LEFT JOIN 
@@ -480,10 +480,12 @@ class BooksModel:
                 WHERE 
                     b.user_id = %s
                 GROUP BY 
-                    b.book_id
+                    b.book_id, u.username, b.title, b.description, b.fileUrl, 
+                    b.audioUrl, b.is_public, b.is_approved, b.uploaded_at, 
+                    b.uploaded_by_role
             """, (publisher_id,))
             books = cur.fetchall()
             return books
-
+    
     def close_connection(self):
         self.conn.close()
