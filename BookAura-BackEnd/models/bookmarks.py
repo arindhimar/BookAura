@@ -58,6 +58,7 @@ class BookmarksModel:
                     b.is_public, 
                     b.is_approved, 
                     b.uploaded_at, 
+                    b.coverUrl,
                     b.uploaded_by_role,
                     COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
                     COALESCE(v.book_view, 0) AS views  -- Include book views

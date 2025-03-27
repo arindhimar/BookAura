@@ -55,7 +55,7 @@ export default function Library() {
         const token = localStorage.getItem("token");
 
         // Fetch bookmarks
-        const bookmarksRes = await fetch(`${import.meta.env.VITE_BASE_API_URL}/user`, {
+        const bookmarksRes = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/user`, {
           headers: { Authorization: `${token}` },
         });
 
@@ -151,7 +151,7 @@ function BookGrid({ books, loading, title, navigate }) {
               onClick={() => navigate(`/book/${book.book_id}`)}
             >
               <img
-                src={book.coverUrl || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
+                src={ "http://127.0.0.1:5000/books/" +  book.cover_url || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
                 alt={book.title}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               />

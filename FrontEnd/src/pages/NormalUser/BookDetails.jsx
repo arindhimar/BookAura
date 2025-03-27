@@ -15,7 +15,6 @@ export default function BookDetails() {
   const [relatedByCategory, setRelatedByCategory] = useState([]);
 
   useEffect(() => {
-
     if(!localStorage.getItem("token")) {
       navigate("/");
       return;
@@ -36,6 +35,7 @@ export default function BookDetails() {
         const data = await response.json();
 
         setBook(data.book);
+        // console.log(data);
         setRelatedByAuthor(data.related_books_by_author || []); 
         setRelatedByCategory(data.related_books_by_category || []);
       } catch (error) {

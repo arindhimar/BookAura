@@ -58,6 +58,7 @@ function BookCard({ book, index }) {
     uploaded_at,
     uploaded_by_role,
     categories,
+    cover_url,
   } = book_details
 
   useEffect(() => {
@@ -159,7 +160,7 @@ function BookCard({ book, index }) {
         <div className="relative aspect-[3/4] overflow-hidden">
           <img
             src={
-              cover ||
+              "http://127.0.0.1:5000/books/"+cover_url ||
               "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"
             }
             alt={title}

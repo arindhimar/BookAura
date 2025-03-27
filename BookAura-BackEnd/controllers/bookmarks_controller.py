@@ -68,7 +68,8 @@ def get_bookmarks_by_user():
             'uploaded_by_role': row['uploaded_by_role'],
             'uploaded_at': row['uploaded_at'],
             'views': row['views'],
-            'categories': row['categories'],  # Include categories
+            'cover_url': row['coverUrl'],  
+            'categories': row['categories'],  
         }
     } for row in bookmarks]
 

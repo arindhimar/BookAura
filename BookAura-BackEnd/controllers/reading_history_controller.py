@@ -111,8 +111,9 @@ def get_reading_history_by_user():
             'is_approved': row['is_approved'],
             'uploaded_at': row['uploaded_at'],
             'uploaded_by_role': row['uploaded_by_role'],
+            'cover_url': row['coverUrl'],
             'categories': row['categories'].split(', ') if row['categories'] else [],
-            'views': row['views']  # Include book views
+            'views': row['views'] 
         }
     } for row in reading_history]
 

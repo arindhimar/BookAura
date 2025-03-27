@@ -130,7 +130,7 @@ export default function Categories() {
                               } transition-transform duration-300`}
                             >
                               <img
-                                src={book.cover || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
+                                src={"http://127.0.0.1:5000/books/"+book.cover_url || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
                                 alt={book.title}
                                 className="object-cover w-full h-full transition-transform duration-300"
                                 onClick={(e) => {

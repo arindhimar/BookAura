@@ -81,16 +81,23 @@ export default function ManageBooks() {
   }
 
   const handleAddBook = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      const token = localStorage.getItem("token")
-      const formData = new FormData()
-      for (const key in newBook) {
-        if (key === "category_ids") {
-          formData.append(key, JSON.stringify(newBook[key]))
-        } else {
-          formData.append(key, newBook[key])
-        }
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+
+      // Append all fields
+      formData.append('title', newBook.title);
+      formData.append('description', newBook.description);
+      formData.append('is_public', newBook.is_public);
+      formData.append('uploaded_by_role', newBook.uploaded_by_role);
+      formData.append('category_ids', JSON.stringify(newBook.category_ids));
+
+      if (newBook.file) {
+        formData.append('file', newBook.file);
+      }
+      if (newBook.coverUrl instanceof File) {
+        formData.append('cover', newBook.coverUrl);
       }
 
       const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/`, {
@@ -99,12 +106,14 @@ export default function ManageBooks() {
           Authorization: `${token}`,
         },
         body: formData,
-      })
+      });
+
       if (!response.ok) {
-        throw new Error("Failed to add book")
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add book');
       }
-      await fetchBooks()
-      setIsAddBookOpen(false)
+
+      // Reset form
       setNewBook({
         title: "",
         description: "",
@@ -113,13 +122,16 @@ export default function ManageBooks() {
         file: null,
         coverUrl: "",
         uploaded_by_role: "Publisher",
-      })
-      toast.success("Book added successfully")
-    } catch (error) {
-      toast.error(error.message)
-    }
-  }
+      });
 
+      await fetchBooks();
+      setIsAddBookOpen(false);
+      toast.success("Book added successfully");
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+  
   const handleEditBook = async (e) => {
     e.preventDefault()
     try {

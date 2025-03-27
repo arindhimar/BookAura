@@ -5,22 +5,21 @@ import time
 from werkzeug.utils import secure_filename
 from utils.auth_utils import decode_token
 import subprocess
+import json
+import pdfplumber
 
 app = Blueprint('books', __name__)
 books_model = BooksModel()
 
-# Folder where uploaded files are saved.
 UPLOAD_FOLDER = 'uploads/'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 AUDIO_UPLOAD_FOLDER = 'audio_uploads/'
 os.makedirs(AUDIO_UPLOAD_FOLDER, exist_ok=True)
 
-
 def upload_file(file, title):
-    """Save uploaded file with standardized naming convention"""
     if not file or not title:
-        return None
+        return None, None
 
     clean_title = secure_filename(title).replace(' ', '_')[:50]
     timestamp = int(time.time())
@@ -28,19 +27,21 @@ def upload_file(file, title):
     
     new_filename = f"{clean_title}_{timestamp}_en{ext}"
     file_path = os.path.join(UPLOAD_FOLDER, new_filename)
+    audio_filename = f"{clean_title}_{timestamp}_en.mp3"
+    audio_url = os.path.join(AUDIO_UPLOAD_FOLDER, audio_filename)
     
     file.save(file_path)
     trigger_translation(file_path)
-    trigger_audio_conversion(file_path)
+    trigger_audio_conversion(file_path, audio_filename)
+    
+    return file_path, audio_url
 
-    return file_path
-
-def trigger_audio_conversion(file_path):
-    """Handle audio conversion in background process for English, Marathi, and Hindi"""
+def trigger_audio_conversion(file_path, audio_filename):
     abs_file_path = os.path.abspath(file_path)
     output_folder = os.path.abspath(AUDIO_UPLOAD_FOLDER)
+    base_name = os.path.splitext(audio_filename)[0]
     
-    script = """
+    script = f"""
 import os
 import pdfplumber
 import pyttsx3
@@ -50,14 +51,14 @@ import base64
 from pydub import AudioSegment
 
 def process_audio():
-    input_pdf = r"{input_pdf}"
+    input_pdf = r"{abs_file_path}"
     output_folder = r"{output_folder}"
     
     try:
-        base_name = os.path.basename(input_pdf).replace('_en', '')
-        audio_filename_en = "{{}}_en.mp3".format(base_name.split('.')[0])  # Add _en for English
-        audio_filename_mr = "{{}}_mr.mp3".format(base_name.split('.')[0])
-        audio_filename_hi = "{{}}_hi.mp3".format(base_name.split('.')[0])  # Add _hi for Hindi
+        audio_filename_en = "{base_name}.mp3"
+        audio_filename_mr = "{base_name.replace('_en', '_mr')}.mp3"
+        audio_filename_hi = "{base_name.replace('_en', '_hi')}.mp3"
+        
         output_path_en = os.path.join(output_folder, audio_filename_en)
         output_path_mr = os.path.join(output_folder, audio_filename_mr)
         output_path_hi = os.path.join(output_folder, audio_filename_hi)
@@ -71,60 +72,38 @@ def process_audio():
         text = re.sub(r"([.,!?])", r"\\1 ", text)
         text = re.sub(r"\\n+", ". \\n", text)
         
-        # Convert English text to speech
         engine = pyttsx3.init()
         engine.setProperty('rate', 150)
         engine.save_to_file(text, output_path_en)
         engine.runAndWait()
-        print("English audio saved to: {{}}".format(output_path_en))
         
-        # Translate and convert to Marathi
         translated_text_mr = translate_text(text, target_lang="mr")
         if translated_text_mr:
-            print("Translation to Marathi successful. Starting TTS...")
             audio_files_mr = convert_text_to_speech(translated_text_mr, output_folder, "mr")
             if audio_files_mr:
                 combined_mr = AudioSegment.empty()
                 for f in audio_files_mr:
                     if os.path.exists(f):
                         combined_mr += AudioSegment.from_wav(f)
-                    else:
-                        print("Skipping missing file: {{}}".format(f))
                 combined_mr.export(output_path_mr, format="mp3")
-                print("Marathi audio saved to: {{}}".format(output_path_mr))
-                
                 for f in audio_files_mr:
                     if os.path.exists(f):
                         os.remove(f)
-            else:
-                print("No Marathi audio files were generated.")
-        else:
-            print("Translation to Marathi failed.")
         
-        # Translate and convert to Hindi
         translated_text_hi = translate_text(text, target_lang="hi")
         if translated_text_hi:
-            print("Translation to Hindi successful. Starting TTS...")
             audio_files_hi = convert_text_to_speech(translated_text_hi, output_folder, "hi")
             if audio_files_hi:
                 combined_hi = AudioSegment.empty()
                 for f in audio_files_hi:
                     if os.path.exists(f):
                         combined_hi += AudioSegment.from_wav(f)
-                    else:
-                        print("Skipping missing file: {{}}".format(f))
                 combined_hi.export(output_path_hi, format="mp3")
-                print("Hindi audio saved to: {{}}".format(output_path_hi))
-                
                 for f in audio_files_hi:
                     if os.path.exists(f):
                         os.remove(f)
-            else:
-                print("No Hindi audio files were generated.")
-        else:
-            print("Translation to Hindi failed.")
     except Exception as e:
-        print("Audio processing failed: {{}}".format(str(e)))
+        print(f"Audio processing failed: {str(e)}")
 
 def translate_text(text, target_lang="mr"):
     url = 'https://admin.models.ai4bharat.org/inference/translate'
@@ -145,7 +124,7 @@ def translate_text(text, target_lang="mr"):
         response = requests.post(url, json=payload, headers=headers, timeout=100)
         return response.json()["output"][0]["target"]
     except Exception as e:
-        print("Translation to {{}} failed: {{}}".format(target_lang, str(e)))
+        print(f"Translation to {target_lang} failed: {str(e)}")
         return None
 
 def convert_text_to_speech(text, output_folder, language):
@@ -154,14 +133,12 @@ def convert_text_to_speech(text, output_folder, language):
         audio_files = []
         
         for idx, chunk in enumerate(chunks):
-            print("Processing {{}} chunk {{}}/{{}}".format(language, idx + 1, len(chunks)))
+            print(f"Processing {language} chunk {idx + 1}/{len(chunks)}")
             
-            # Preprocess chunk: Remove unsupported special characters
-            cleaned_chunk = re.sub(r"[©®™]", "", chunk)  # Remove ©, ®, ™, etc.
+            cleaned_chunk = re.sub(r"[©®™]", "", chunk)
             if cleaned_chunk != chunk:
-                print("Removed unsupported special characters from chunk {{}}".format(idx + 1))
+                print(f"Removed unsupported special characters from chunk {idx + 1}")
             
-            # Use different modelId for Hindi TTS
             model_id = "633c021bfb796d5e100d4ff9" if language == "hi" else "6576a25f4e7d42484da63537"
             
             payload = {{
@@ -182,24 +159,24 @@ def convert_text_to_speech(text, output_folder, language):
                 if response.status_code == 200:
                     audio_content = response.json().get("audio", [{{}}])[0].get("audioContent")
                     if audio_content:
-                        chunk_file = os.path.join(output_folder, "temp_{{}}_chunk_{{}}.wav".format(language, idx + 1))
+                        chunk_file = os.path.join(output_folder, f"temp_{language}_chunk_{idx + 1}.wav")
                         with open(chunk_file, "wb") as f:
                             f.write(base64.b64decode(audio_content))
                         audio_files.append(chunk_file)
-                        print("Saved {{}} audio chunk {{}}".format(language, idx + 1))
+                        print(f"Saved {language} audio chunk {idx + 1}")
                     else:
-                        print("No audio content in {{}} chunk {{}}".format(language, idx + 1))
+                        print(f"No audio content in {language} chunk {idx + 1}")
                         save_failed_chunk(chunk, idx + 1, output_folder, language)
                 else:
-                    print("{{}} chunk {{}} failed: {{}} - {{}}".format(language, idx + 1, response.status_code, response.text))
+                    print(f"{language} chunk {idx + 1} failed: {response.status_code} - {response.text}")
                     save_failed_chunk(chunk, idx + 1, output_folder, language)
             except Exception as e:
-                print("Error processing {{}} chunk {{}}: {{}}".format(language, idx + 1, str(e)))
+                print(f"Error processing {language} chunk {idx + 1}: {str(e)}")
                 save_failed_chunk(chunk, idx + 1, output_folder, language)
         
         return audio_files
     except Exception as e:
-        print("Error during {{}} TTS conversion: {{}}".format(language, str(e)))
+        print(f"Error during {language} TTS conversion: {str(e)}")
         return None
 
 def split_text_into_chunks(text, chunk_size=5000):
@@ -214,37 +191,21 @@ def split_text_into_chunks(text, chunk_size=5000):
     return chunks
 
 def save_failed_chunk(chunk, chunk_number, output_folder, language):
-    failed_chunk_file = os.path.join(output_folder, "failed_{{}}_chunk_{{}}.txt".format(language, chunk_number))
+    failed_chunk_file = os.path.join(output_folder, f"failed_{language}_chunk_{chunk_number}.txt")
     with open(failed_chunk_file, "w", encoding="utf-8") as f:
         f.write(chunk)
-    print("Saved failed {{}} chunk {{}} to: {{}}".format(language, chunk_number, failed_chunk_file))
+    print(f"Saved failed {language} chunk {chunk_number} to: {failed_chunk_file}")
 
 process_audio()
-""".format(input_pdf=abs_file_path, output_folder=output_folder)
-
+"""
     subprocess.Popen(['python', '-c', script])
 
 def trigger_translation(file_path):
-    """
-    Execute a Selenium script that translates the uploaded PDF into multiple languages.
-    The script:
-      - Translates the uploaded PDF to Hindi and Marathi using Google Translate Docs.
-      - Downloads the translated PDFs.
-      - Renames them to match the original file name with `_hi` or `_mr` suffix.
-    """
-    import os
-    import subprocess
-
-    # Get the absolute path and filename of the uploaded file.
     abs_file_path = os.path.abspath(file_path)
-    file_name = os.path.splitext(os.path.basename(abs_file_path))[0]  # Extract filename without extension
-    # Use a raw string (via r"") to prevent escape-sequence issues.
+    file_name = os.path.splitext(os.path.basename(abs_file_path))[0]
     safe_input_pdf = abs_file_path.replace("\\", "\\\\")
-    
-    # Update the output folder as desired.
     output_folder = r"C:/Users/Arin Dhimar/Documents/BookAura/BookAura-BackEnd/uploads/"
     
-    # Build the Selenium script.
     script = f'''
 import os
 import time
@@ -254,17 +215,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-# File path for input PDF (from the Flask upload)
 input_pdf = r"{safe_input_pdf}"
-# Output folder where the translated PDFs will be saved.
 output_folder = r"{output_folder}"
-# Original file name without extension
 file_name = "{file_name}"
 
-# List of target languages (Hindi & Marathi)
 languages = {{"hi": "Hindi", "mr": "Marathi"}}
 
-# Initialize Chrome with options.
 options = webdriver.ChromeOptions()
 options.add_argument("--disable-blink-features=AutomationControlled")
 driver = webdriver.Chrome(options=options)
@@ -272,44 +228,34 @@ driver = webdriver.Chrome(options=options)
 for lang_code, lang_name in languages.items():
     try:
         print(f"Translating to {{lang_name}}...")
-        # Open Google Translate Docs page for the target language.
         driver.get(f"https://translate.google.com/?sl=en&tl={{lang_code}}&op=docs")
-        # Wait for the file input element and upload the PDF.
         file_input = WebDriverWait(driver, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, 'input[type="file"]'))
         )
         file_input.send_keys(input_pdf)
         print(f"File uploaded for {{lang_name}}.")
-        # Click the "Translate" button.
         translate_button = WebDriverWait(driver, 20).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, '[jsname="vSSGHe"]'))
         )
         translate_button.click()
         print(f"Translation to {{lang_name}} started.")
-        # Wait for translation to complete and download button to be clickable.
         download_button = WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, '[jsname="hRZeKc"]'))
         )
         print(f"Translation to {{lang_name}} completed. Downloading...")
         download_button.click()
         print(f"Download initiated for {{lang_name}}.")
-        # Wait for the download to complete.
-        time.sleep(10)  # Adjust sleep time based on network speed.
-        # Determine the default download directory (assuming Windows default).
+        time.sleep(10)
         download_dir = os.path.join(os.path.expanduser("~"), "Downloads") + os.sep
-        # Get a list of all PDF files in the download directory.
         files = os.listdir(download_dir)
         pdf_files = [f for f in files if f.lower().endswith('.pdf')]
         if pdf_files:
-            # Get the most recently created PDF file.
             translated_pdf = max([os.path.join(download_dir, f) for f in pdf_files], key=os.path.getctime)
             translated_base_name = os.path.splitext(os.path.basename(translated_pdf))[0]
             
-            # Fix naming issue (remove `_en` if present)
             if translated_base_name.endswith("_en"):
-                translated_base_name = translated_base_name[:-3]  # Remove "_en"
+                translated_base_name = translated_base_name[:-3]
 
-            # Rename and move the file
             new_filename = os.path.join(output_folder, f"{{translated_base_name}}_{{lang_code}}.pdf")
             shutil.move(translated_pdf, new_filename)
             print(f"Saved translated PDF: {{new_filename}}")
@@ -320,12 +266,21 @@ for lang_code, lang_name in languages.items():
 driver.quit()
 print("Translation process completed.")
 '''
-    # Launch the translation process in a separate process.
     subprocess.Popen(['python', '-c', script])
-    
-    
+
+@app.route('/uploads/<path:filename>')
+def serve_uploaded_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+@app.route('/audio_uploads/<path:filename>')
+def serve_audio_file(filename):
+    print("asdjklaskjdhkasd")
+    return send_from_directory(AUDIO_UPLOAD_FOLDER, filename)
+
+
 @app.route('/', methods=['GET'])
 def get_all_books():
+    base_url = request.host_url
     rows = books_model.fetch_all_books()
     books = [{
         'book_id': row['book_id'],
@@ -339,12 +294,11 @@ def get_all_books():
         'is_approved': row['is_approved'],
         'uploaded_at': row['uploaded_at'],
         'uploaded_by_role': row['uploaded_by_role'],
+        'cover_url': f"{row['coverUrl']}" if row['coverUrl'] else None,
         'categories': row['categories'].split(', ') if row['categories'] else [],
-        'views': row['views']  # Include book views
+        'views': row['views']
     } for row in rows]
     return jsonify(books)
-
-
 
 @app.route('/<int:book_id>', methods=['GET'])
 def get_book(book_id):
@@ -352,11 +306,10 @@ def get_book(book_id):
     if row is None:
         return jsonify({'error': 'Book not found'}), 404
 
-    # Structure the book data
     book = {
         'book_id': row['book_id'],
         'author_id': row['author_id'],
-        'author_name': row['author_name'],  
+        'author_name': row['author_name'],
         'title': row['title'],
         'description': row['description'],
         'file_url': row['fileUrl'],
@@ -365,43 +318,50 @@ def get_book(book_id):
         'is_approved': row['is_approved'],
         'uploaded_at': row['uploaded_at'],
         'uploaded_by_role': row['uploaded_by_role'],
+        'cover_url': f"{row['coverUrl']}" if row['coverUrl'] else None,
         'categories': row['categories'].split(', ') if row['categories'] else []
     }
-
     return jsonify(book)
+
 @app.route('/', methods=['POST'])
 def create_book():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-        
-    data = request.form
-    file = request.files['file']
-    
-    # Validate required fields
-    required_fields = ['title', 'description', 'is_public', 'uploaded_by_role']
-    for field in required_fields:
-        if field not in data:
-            return jsonify({'error': f'Missing required field: {field}'}), 400
-
-    # Authentication
-    token = request.headers.get('Authorization')
-    if not token:
-        return jsonify({'error': 'Authorization token is required'}), 401
-    decoded_token = decode_token(token)
-    if not decoded_token:
-        return jsonify({'error': 'Invalid token'}), 401
-
-    # File handling with title-based naming
-    file_url = upload_file(file, data['title'])
-    if not file_url:
-        return jsonify({'error': 'File processing failed'}), 500
-
-    # Generate audio URL from file URL
-    audio_filename = os.path.basename(file_url).replace('_en', '_audio').replace('.pdf', '.mp3')
-    audio_url = os.path.join(AUDIO_UPLOAD_FOLDER, audio_filename)
-
-    # Database operations
     try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+
+        data = request.form
+        file = request.files['file']
+        
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'Only PDF files are allowed'}), 400
+        
+        cover_file = request.files.get('cover')
+
+        required_fields = ['title', 'description', 'is_public', 'uploaded_by_role']
+        if any(field not in data for field in required_fields):
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'error': 'Authorization token is required'}), 401
+        decoded_token = decode_token(token)
+        if not decoded_token:
+            return jsonify({'error': 'Invalid token'}), 401
+
+        timestamp = int(time.time())
+        file_url, audio_url = upload_file(file, f"{data['title']}_{timestamp}")
+        if not file_url:
+            return jsonify({'error': 'File upload failed'}), 500
+
+        cover_url = upload_file(cover_file, f"{data['title']}_cover_{timestamp}") if cover_file else "/default-cover.png"
+
+        try:
+            category_ids = json.loads(data.get('category_ids', '[]'))
+            if not isinstance(category_ids, list):
+                raise ValueError
+        except ValueError:
+            return jsonify({'error': 'Invalid category IDs format'}), 400
+
         book_id = books_model.create_book(
             user_id=int(decoded_token['user_id']),
             title=data['title'],
@@ -411,19 +371,21 @@ def create_book():
             is_public=data['is_public'].lower() == 'true',
             is_approved=False,
             uploaded_by_role=data['uploaded_by_role'],
-            category_ids=data.get('category_ids', '')
+            category_ids=category_ids,
+            cover_url=cover_url
         )
+
         return jsonify({
             'message': 'Book created successfully',
+            'book_id': book_id,
             'file_url': file_url,
-            'audio_url': audio_url,
-            'translations': [
-                file_url.replace('_en', '_hi'),
-                file_url.replace('_en', '_mr')
-            ]
+            'cover_url': cover_url,
+            'audio_url': audio_url
         }), 201
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error creating book: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/<int:book_id>', methods=['PUT'])
 def update_book(book_id):
@@ -513,7 +475,6 @@ def get_pdf(filename):
 
 @app.route('/audio/<filename>')
 def get_audio(filename):
-    print("asjdhasbdjhabsjdbjashgd")
     language = request.args.get('language', default='english')
     if language == 'english':
         return send_from_directory(AUDIO_UPLOAD_FOLDER, filename)
@@ -521,9 +482,7 @@ def get_audio(filename):
         return send_from_directory(AUDIO_UPLOAD_FOLDER, filename.replace('_en', '_hi'))
     elif language == 'marathi':
         return send_from_directory(AUDIO_UPLOAD_FOLDER, filename.replace('_en', '_mr'))
-    
     return jsonify({'error': 'Invalid language'}), 400
-
 
 @app.route('/unread', methods=['GET'])
 def get_unread_books():
@@ -567,10 +526,9 @@ def search_books(query):
         'uploaded_at': row['uploaded_at'],
         'uploaded_by_role': row['uploaded_by_role'],
         'categories': row['categories'].split(', ') if row['categories'] else [],
-        'views': row['views']  # Include book views
+        'views': row['views']
     } for row in rows]
     return jsonify(books)
-
 
 @app.route('/category/<int:category_id>', methods=['GET'])
 def get_books_by_category(category_id):
@@ -588,20 +546,16 @@ def get_books_by_category(category_id):
         'uploaded_at': row['uploaded_at'],
         'uploaded_by_role': row['uploaded_by_role'],
         'categories': row['categories'].split(', ') if row['categories'] else [],
-        'views': row['views']  # Include book views
+        'views': row['views']
     } for row in rows]
     return jsonify(books)
-
 
 @app.route('/full/<int:book_id>', methods=['GET'])
 def get_full_book(book_id):
     book_data = books_model.fetch_complete_book(book_id)
-
     if not book_data:
         return jsonify({"error": "Book not found"}), 404
-
     return jsonify(book_data)
-
 
 @app.route('/publisher/', methods=['GET'])
 def get_books_by_publisher():
@@ -629,7 +583,7 @@ def get_books_by_publisher():
         'uploaded_at': row['uploaded_at'],
         'uploaded_by_role': row['uploaded_by_role'],
         'categories': row['categories'].split(', ') if row['categories'] else [],
-        'views': row['views']  # Include book views
+        'views': row['views']
     } for row in rows]
     
     return jsonify(books)

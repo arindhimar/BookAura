@@ -67,6 +67,7 @@ class CategoriesModel:
                 b.is_public, 
                 b.is_approved, 
                 b.uploaded_at, 
+                b.coverUrl,  -- New column
                 b.uploaded_by_role
             FROM books b
             LEFT JOIN book_category bc ON b.book_id = bc.book_id
@@ -90,7 +91,8 @@ class CategoriesModel:
                 'is_public': row[7],
                 'is_approved': row[8],
                 'uploaded_at': row[9],
-                'uploaded_by_role': row[10]
+                'uploaded_by_role': row[11],
+                'cover_url': row[10]
             }
 
             if category_name not in category_wise_books:

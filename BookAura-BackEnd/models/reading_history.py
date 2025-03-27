@@ -55,6 +55,7 @@ class ReadingHistoryModel:
                     b.is_approved, 
                     b.uploaded_at, 
                     b.uploaded_by_role,
+                    b.coverUrl,
                     COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
                     v.book_view AS views  -- Include book views
                 FROM 

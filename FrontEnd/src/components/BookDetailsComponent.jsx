@@ -2,22 +2,7 @@
 
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
-import {
-  Bookmark,
-  BookmarkCheck,
-  Headphones,
-  Volume2,
-  VolumeX,
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  X,
-  MoreVertical,
-  Eye,
-  Share,
-  Heart,
-} from "lucide-react"
+import { Bookmark, BookmarkCheck, Headphones, Volume2, VolumeX, Play, Pause, SkipBack, SkipForward, X, MoreVertical, Eye, Share, Heart } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect, useRef } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -28,7 +13,8 @@ import { Separator } from "./ui/separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 
 export default function BookDetailsComponent({ book }) {
-  const [isBookmarked, setIsBookmarked] = useState(undefined)
+  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [isLoadingBookmark, setIsLoadingBookmark] = useState(true)
   const [selectedLanguage, setSelectedLanguage] = useState("english")
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioProgress, setAudioProgress] = useState(0)
@@ -41,45 +27,58 @@ export default function BookDetailsComponent({ book }) {
   const [isAudioLoaded, setIsAudioLoaded] = useState(false)
   const audioRef = useRef(null)
 
-  const handleBookmarks = async () => {
-    try {
-      const method = isBookmarked ? "DELETE" : "POST"
-      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `${localStorage.getItem("token")}`,
-        },
-      })
-
-      if (!response.ok) throw new Error("Bookmark update failed")
-      setIsBookmarked(!isBookmarked)
-    } catch (error) {
-      console.error("Error updating bookmark:", error)
-    }
-  }
-
   useEffect(() => {
     const fetchBookmarkStatus = async () => {
+      setIsLoadingBookmark(true)
       try {
-        const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`, {
-          headers: { Authorization: `${localStorage.getItem("token")}` },
-          method: "GET",
-        })
+        const response = await fetch(
+          `${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`,
+          {
+            headers: { Authorization: `${localStorage.getItem("token")}` },
+            method: "GET",
+          }
+        )
 
         if (response.ok) {
           const data = await response.json()
-          setIsBookmarked(data.is_bookmarked)
+          setIsBookmarked(data.is_bookmarked === true || data.is_bookmarked === "true")
         }
       } catch (error) {
         console.error("Error fetching bookmark status:", error)
+      } finally {
+        setIsLoadingBookmark(false)
       }
     }
 
     if (book) fetchBookmarkStatus()
   }, [book])
 
-  // Set up audio event listeners
+  const handleBookmarks = async () => {
+    const newBookmarkState = !isBookmarked
+    setIsBookmarked(newBookmarkState)
+    
+    try {
+      const method = newBookmarkState ? "POST" : "DELETE"
+      const response = await fetch(
+        `${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`,
+        {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `${localStorage.getItem("token")}`,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error("Bookmark update failed")
+      }
+    } catch (error) {
+      console.error("Error updating bookmark:", error)
+      setIsBookmarked(!newBookmarkState)
+    }
+  }
+
   useEffect(() => {
     const audio = audioRef.current
 
@@ -127,14 +126,12 @@ export default function BookDetailsComponent({ book }) {
     }
   }, [])
 
-  // Update audio volume when it changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : audioVolume
     }
   }, [audioVolume, isMuted])
 
-  // Update playback rate when it changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.playbackRate = playbackRate
@@ -186,8 +183,8 @@ export default function BookDetailsComponent({ book }) {
       }
 
       window.open(url, "_blank", "noopener, noreferrer")
-      await addView() // Add book view
-      await addReadingHistory() // Add book to reading history
+      await addView()
+      await addReadingHistory()
     } catch (err) {
       console.error("Error fetching PDF:", err)
     }
@@ -199,7 +196,7 @@ export default function BookDetailsComponent({ book }) {
     const baseUrl = book.audioUrl.replace("audio_uploads/", "")
 
     if (selectedLanguage === "english") {
-      return `${import.meta.env.VITE_BASE_API_URL}/books/audio/${baseUrl}`
+      return `${import.meta.env.VITE_BASE_API_URL}/books/audio_uploads/${baseUrl}`
     }
 
     const langCode = selectedLanguage === "hindi" ? "hi" : "mr"
@@ -230,8 +227,8 @@ export default function BookDetailsComponent({ book }) {
 
         await audio.play()
         setIsPlaying(true)
-        await addView() // Add book view
-        await addReadingHistory() // Add book to listening history
+        await addView()
+        await addReadingHistory()
       } catch (err) {
         console.error("Error playing audio:", err)
       }
@@ -292,7 +289,6 @@ export default function BookDetailsComponent({ book }) {
         url: window.location.href,
       })
     } else {
-      // Fallback for browsers that don't support the Web Share API
       navigator.clipboard.writeText(window.location.href)
       alert("Link copied to clipboard!")
     }
@@ -307,18 +303,16 @@ export default function BookDetailsComponent({ book }) {
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Book Cover & Actions */}
         <div className="md:col-span-1">
           <div className="sticky top-24">
             <div className="flex flex-col items-center">
               <img
-                src={book.cover || "/placeholder.svg"}
+                src={"http://127.0.0.1:5000/books/"+book.coverUrl || "/placeholder.svg"}
                 alt={book.title}
                 className="w-full max-w-xs rounded-lg shadow-lg object-cover aspect-[2/3]"
               />
 
               <div className="w-full max-w-xs mt-6 space-y-4">
-                {/* Language Selection */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Language</label>
                   <Select value={selectedLanguage} onValueChange={(value) => setSelectedLanguage(value)}>
@@ -333,7 +327,6 @@ export default function BookDetailsComponent({ book }) {
                   </Select>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex flex-col space-y-3">
                   <Button onClick={handleReadNow} className="w-full">
                     Read Now
@@ -351,7 +344,6 @@ export default function BookDetailsComponent({ book }) {
           </div>
         </div>
 
-        {/* Book Details */}
         <div className="md:col-span-2">
           <div className="flex justify-between items-start mb-4">
             <div>
@@ -362,7 +354,7 @@ export default function BookDetailsComponent({ book }) {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="icon" onClick={handleBookmarks} className="flex-shrink-0">
+              <Button variant="outline" size="icon" onClick={handleBookmarks} disabled={isLoadingBookmark} className="flex-shrink-0">
                 {isBookmarked ? <BookmarkCheck className="h-4 w-4 text-primary" /> : <Bookmark className="h-4 w-4" />}
               </Button>
 
@@ -423,10 +415,8 @@ export default function BookDetailsComponent({ book }) {
             <p className="text-muted-foreground">{book.description}</p>
           </div>
 
-          {/* Audio player - hidden element */}
           <audio ref={audioRef} preload="metadata" className="hidden" />
 
-          {/* Audio Player */}
           <AnimatePresence>
             {hasAudio && showAudioPlayer && (
               <motion.div
@@ -455,15 +445,12 @@ export default function BookDetailsComponent({ book }) {
                     </div>
 
                     <div className="space-y-4">
-                      {/* Expanded Controls */}
                       <div className="space-y-2">
-                        {/* Time Display */}
                         <div className="flex justify-between text-sm text-muted-foreground">
                           <span>{formatTime(currentTime)}</span>
                           <span>{isAudioLoaded ? formatTime(duration) : "--:--"}</span>
                         </div>
 
-                        {/* Progress Bar */}
                         <Slider
                           value={[audioProgress]}
                           min={0}
@@ -474,9 +461,7 @@ export default function BookDetailsComponent({ book }) {
                         />
                       </div>
 
-                      {/* Controls */}
                       <div className="flex items-center justify-between">
-                        {/* Playback Speed */}
                         <div className="flex items-center">
                           <span className="text-sm mr-2">Speed:</span>
                           <Select
@@ -497,7 +482,6 @@ export default function BookDetailsComponent({ book }) {
                           </Select>
                         </div>
 
-                        {/* Play Controls */}
                         <div className="flex items-center space-x-2">
                           <TooltipProvider>
                             <Tooltip>
@@ -536,7 +520,6 @@ export default function BookDetailsComponent({ book }) {
                           </TooltipProvider>
                         </div>
 
-                        {/* Volume Control */}
                         <div className="flex items-center space-x-2">
                           <Button variant="ghost" size="icon" onClick={toggleMute}>
                             {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -562,4 +545,3 @@ export default function BookDetailsComponent({ book }) {
     </div>
   )
 }
-

@@ -1,6 +1,7 @@
 import mysql.connector
 import random
-
+import ast
+import json
 
 class BooksModel:
     def __init__(self):
@@ -29,6 +30,7 @@ class BooksModel:
                     b.is_approved, 
                     b.uploaded_at, 
                     b.uploaded_by_role,
+                    b.coverUrl,
                     COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
                     v.book_view AS views  -- Include book views
                 FROM 
@@ -65,6 +67,7 @@ class BooksModel:
                     b.is_approved, 
                     b.uploaded_at, 
                     b.uploaded_by_role,
+                    b.coverUrl,
                     COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories
                 FROM 
                     books b
@@ -153,40 +156,53 @@ class BooksModel:
     #     cur.close()
 
 
-    def create_book(self, user_id, title, description, file_url, audio_url, is_public, is_approved, uploaded_by_role, category_ids):
-        if isinstance(category_ids, str):
+
+    def create_book(self, user_id, title, description, file_url, audio_url, is_public, is_approved, uploaded_by_role, category_ids, cover_url=""):
             try:
-                import ast
-                category_ids = ast.literal_eval(category_ids)
-            except:
-                category_ids = []
+                # Convert category_ids to list if needed
+                if isinstance(category_ids, str):
+                    category_ids = json.loads(category_ids)
+                
+                with self.conn.cursor() as cur:
+                    # Insert book with all fields
+                    cur.execute("""
+                        INSERT INTO books 
+                        (user_id, title, description, fileUrl, audioUrl, is_public, is_approved, uploaded_by_role, coverUrl) 
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        user_id, 
+                        title, 
+                        description, 
+                        file_url, 
+                        audio_url or "", 
+                        is_public, 
+                        is_approved, 
+                        uploaded_by_role,
+                        cover_url or "/default-cover.png"
+                    ))
 
-        with self.conn.cursor() as cur:
-            try:
-                cur.execute("""
-                    INSERT INTO books 
-                    (user_id, title, description, fileUrl, audioUrl, is_public, is_approved, uploaded_by_role) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (user_id, title, description, file_url, audio_url, is_public, is_approved, uploaded_by_role))
+                    book_id = cur.lastrowid
+                    cur.execute('INSERT INTO views (book_id, book_view) VALUES (%s, %s)', (book_id, 0))
 
-                book_id = cur.lastrowid
-                cur.execute('INSERT INTO views(book_id,book_view) VALUES(%s,%s)', (book_id, 0))
+                    # Insert categories safely
+                    if category_ids and isinstance(category_ids, list):
+                        for category_id in category_ids:
+                            try:
+                                cur.execute("""
+                                    INSERT INTO book_category (book_id, category_id)
+                                    VALUES (%s, %s)
+                                """, (book_id, int(category_id)))
+                            except ValueError:
+                                continue
 
-                if category_ids:
-                    for category_id in category_ids:
-                        if str(category_id).isdigit():
-                            cur.execute("""
-                                INSERT INTO book_category (book_id, category_id)
-                                VALUES (%s, %s)
-                            """, (book_id, int(category_id)))
+                    self.conn.commit()
+                    return book_id
 
-                self.conn.commit()
-                return book_id
             except Exception as e:
                 self.conn.rollback()
-                raise e
-
-
+                print(f"Database Error: {e}")
+                raise
+            
     def update_book(self, book_id,title, description, is_public, is_approved):
         cur = self.conn.cursor()
         cur.execute('UPDATE books SET title = %s, description = %s, is_public = %s, is_approved = %s WHERE book_id = %s',
@@ -386,6 +402,7 @@ class BooksModel:
                     b.is_approved, 
                     b.uploaded_at, 
                     b.uploaded_by_role,
+                    b.coverUrl,
                     COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories
                 FROM 
                     books b
