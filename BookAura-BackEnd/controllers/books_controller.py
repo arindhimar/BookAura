@@ -7,10 +7,6 @@ from utils.auth_utils import decode_token
 import subprocess
 import json
 import pdfplumber
-import pyttsx3
-import requests
-from pydub import AudioSegment
-
 
 app = Blueprint('books', __name__)
 books_model = BooksModel()
@@ -87,22 +83,19 @@ def upload_file(file, title):
         print(f"File upload error: {str(error)}")
         return None, None
 
-def trigger_audio_conversion(file_path, audio_filename):
-    """
-    Convert the full PDF to audio for English (using pyttsx3), Hindi, and Marathi.
-    This updated version saves English chunks as WAV files (since pyttsx3 outputs WAV),
-    then combines them and converts the final output to MP3.
-    Detailed debug logging is included.
-    """
-    import os
-    import subprocess
 
+
+
+
+def trigger_audio_conversion(file_path, audio_filename=None):
+    if audio_filename is None:
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        audio_filename = f"{base_name}_en.mp3"
+    """Handle audio conversion in background process for English, Marathi, and Hindi"""
     abs_file_path = os.path.abspath(file_path)
-    output_folder = os.path.abspath("audio_uploads")
-    # Derive base name from the provided audio_filename
-    base_name = os.path.splitext(audio_filename)[0]
-
-    script = f"""
+    output_folder = os.path.abspath(AUDIO_UPLOAD_FOLDER)
+    
+    script = """
 import os
 import pdfplumber
 import pyttsx3
@@ -110,233 +103,182 @@ import re
 import requests
 import base64
 from pydub import AudioSegment
-import time
 
 def process_audio():
-    input_pdf = r"{abs_file_path}"
+    input_pdf = r"{input_pdf}"
     output_folder = r"{output_folder}"
     
     try:
-        # Set output filenames for each language
-        audio_filename_en = "{base_name}.mp3"
-        audio_filename_mr = "{base_name.replace('_en', '_mr')}.mp3"
-        audio_filename_hi = "{base_name.replace('_en', '_hi')}.mp3"
-        
+        base_name = os.path.basename(input_pdf).replace('_en', '')
+        audio_filename_en = "{{}}_en.mp3".format(base_name.split('.')[0])  # Add _en for English
+        audio_filename_mr = "{{}}_mr.mp3".format(base_name.split('.')[0])
+        audio_filename_hi = "{{}}_hi.mp3".format(base_name.split('.')[0])  # Add _hi for Hindi
         output_path_en = os.path.join(output_folder, audio_filename_en)
         output_path_mr = os.path.join(output_folder, audio_filename_mr)
         output_path_hi = os.path.join(output_folder, audio_filename_hi)
         
-        # Extract text from PDF with debug info
         text = ""
-        page_count = 0
         with pdfplumber.open(input_pdf) as pdf:
-            for i, page in enumerate(pdf.pages):
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\\n"
-                    print(f"Page {{i+1}}: {{len(page_text)}} characters extracted.")
-                else:
-                    print(f"Page {{i+1}}: No text extracted.")
-                page_count += 1
-        print(f"Total pages processed: {{page_count}}")
-        total_length = len(text)
-        print(f"Total extracted text length: {{total_length}} characters.")
-        if total_length == 0:
-            print("No text found in the PDF.")
-            return
+            for page in pdf.pages:
+                if page.extract_text():
+                    text += page.extract_text() + "\\n"
         
-        # Preprocess text
         text = re.sub(r"([.,!?])", r"\\1 ", text)
-        text = re.sub(r"\\n+", ". \\n", text).strip()
-        print(f"Text length after cleaning: {{len(text)}} characters.")
+        text = re.sub(r"\\n+", ". \\n", text)
         
-        # --------------------
-        # English Audio Conversion (using WAV temporary files)
-        # --------------------
-        max_chars = 5000
-        chunks = []
-        remaining = text
-        while len(remaining) > max_chars:
-            split_index = remaining.rfind(" ", 0, max_chars)
-            if split_index == -1:
-                split_index = max_chars
-            chunk = remaining[:split_index].strip()
-            chunks.append(chunk)
-            remaining = remaining[split_index:].strip()
-        if remaining:
-            chunks.append(remaining)
-        print(f"English: Split text into {{len(chunks)}} chunks.")
-        for idx, ch in enumerate(chunks):
-            print(f"  Chunk {{idx+1}} length: {{len(ch)}}")
-        
+        # Convert English text to speech
         engine = pyttsx3.init()
         engine.setProperty('rate', 150)
-        temp_files = []
-        # Save as WAV files to ensure proper format.
-        temp_dir = os.path.abspath(os.environ.get("TEMP", "/tmp"))
-        for i, chunk in enumerate(chunks):
-            temp_file = os.path.join(temp_dir, f"en_chunk_{{i}}.wav")
-            print(f"Processing English chunk {{i+1}}...")
-            try:
-                engine.save_to_file(chunk, temp_file)
-                engine.runAndWait()
-                if os.path.exists(temp_file) and os.path.getsize(temp_file) > 0:
-                    print(f"English chunk {{i+1}} converted successfully, file: {{temp_file}}")
-                    temp_files.append(temp_file)
-                else:
-                    print(f"English chunk {{i+1}} conversion failed; file not created or empty.")
-            except Exception as e:
-                print(f"Error converting English chunk {{i+1}}: {{e}}")
-        engine.stop()
+        engine.save_to_file(text, output_path_en)
+        engine.runAndWait()
+        print("English audio saved to: {{}}".format(output_path_en))
         
-        if not temp_files:
-            print("No English audio chunks were created.")
-        combined_en = AudioSegment.empty()
-        for file in temp_files:
-            try:
-                seg = AudioSegment.from_wav(file)
-                combined_en += seg
-            except Exception as e:
-                print(f"Error loading English chunk {{file}}: {{e}}")
-        try:
-            combined_en.export(output_path_en, format="mp3")
-            print(f"Final English audio saved to: {{output_path_en}}")
-        except Exception as e:
-            print("Error exporting English audio: {{e}}")
-        
-        # --------------------
-        # Hindi and Marathi conversion functions (unchanged)
-        # --------------------
-        def translate_text(text, target_lang):
-            url = 'https://admin.models.ai4bharat.org/inference/translate'
-            payload = {{
-                "sourceLanguage": "en",
-                "targetLanguage": target_lang,
-                "input": text,
-                "task": "translation",
-                "serviceId": "ai4bharat/indictrans--gpu-t4",
-                "track": True
-            }}
-            headers = {{
-                'Content-Type': 'application/json',
-                'User-Agent': 'Mozilla/5.0'
-            }}
-            try:
-                response = requests.post(url, json=payload, headers=headers, timeout=100)
-                if response.status_code == 200:
-                    translated = response.json()["output"][0]["target"]
-                    print(f"Translation to {{target_lang}} successful. Translated length: {{len(translated)}} characters.")
-                    return translated
-                else:
-                    print(f"Translation API returned status {{response.status_code}} for language {{target_lang}}")
-                    return None
-            except Exception as e:
-                print(f"Translation to {{target_lang}} failed: {{e}}")
-                return None
-        
-        def convert_text_to_speech(text, output_folder, language):
-            max_chars_local = 5000
-            chunks_local = []
-            remaining_text = text
-            while len(remaining_text) > max_chars_local:
-                split_index = remaining_text.rfind(" ", 0, max_chars_local)
-                if split_index == -1:
-                    split_index = max_chars_local
-                chunks_local.append(remaining_text[:split_index].strip())
-                remaining_text = remaining_text[split_index:].strip()
-            if remaining_text:
-                chunks_local.append(remaining_text)
-            print(f"{{language.upper()}}: Split translated text into {{len(chunks_local)}} chunks.")
-            for idx, ch in enumerate(chunks_local):
-                print(f"  {{language.upper()}} chunk {{idx+1}} length: {{len(ch)}}")
-            temp_audio_files = []
-            for i, chunk in enumerate(chunks_local):
-                cleaned_chunk = re.sub(r"[©®™]", "", chunk)
-                model_id = "633c021bfb796d5e100d4ff9" if language == "hi" else "6576a25f4e7d42484da63537"
-                payload = {{
-                    "modelId": model_id,
-                    "task": "tts",
-                    "input": [{{"source": cleaned_chunk}}],
-                    "gender": "female",
-                    "userId": None
-                }}
-                try:
-                    r = requests.post(
-                        "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/compute",
-                        json=payload,
-                        headers={{"Content-Type": "application/json"}},
-                        timeout=30
-                    )
-                    if r.status_code == 200:
-                        audio_content = r.json().get("audio", [{{}}])[0].get("audioContent")
-                        if audio_content:
-                            temp_file = os.path.join(output_folder, f"temp_{{language}}_chunk_{{i+1}}.wav")
-                            with open(temp_file, "wb") as f:
-                                f.write(base64.b64decode(audio_content))
-                            temp_audio_files.append(temp_file)
-                            print(f"Saved {{language.upper()}} audio chunk {{i+1}}")
-                        else:
-                            print(f"No audio content in {{language.upper()}} chunk {{i+1}}")
+        # Translate and convert to Marathi
+        translated_text_mr = translate_text(text, target_lang="mr")
+        if translated_text_mr:
+            print("Translation to Marathi successful. Starting TTS...")
+            audio_files_mr = convert_text_to_speech(translated_text_mr, output_folder, "mr")
+            if audio_files_mr:
+                combined_mr = AudioSegment.empty()
+                for f in audio_files_mr:
+                    if os.path.exists(f):
+                        combined_mr += AudioSegment.from_wav(f)
                     else:
-                        print(f"TTS API returned status {{r.status_code}} for {{language.upper()}} chunk {{i+1}}")
-                except Exception as e:
-                    print(f"Error converting {{language.upper()}} chunk {{i+1}}: {{e}}")
-                time.sleep(0.5)
-            return temp_audio_files
-        
-        # Process Hindi
-        translated_hi = translate_text(text, "hi")
-        if translated_hi:
-            audio_files_hi = convert_text_to_speech(translated_hi, output_folder, "hi")
-            combined_hi = AudioSegment.empty()
-            for file in audio_files_hi:
-                try:
-                    seg = AudioSegment.from_wav(file)
-                    combined_hi += seg
-                except Exception as e:
-                    print(f"Error loading Hindi chunk {{file}}: {{e}}")
-            try:
-                combined_hi.export(output_path_hi, format="mp3")
-                print(f"Hindi audio saved to: {{output_path_hi}}")
-            except Exception as e:
-                print("Error exporting Hindi audio: {{e}}")
-        else:
-            print("Hindi translation failed.")
-        
-        # Process Marathi
-        translated_mr = translate_text(text, "mr")
-        if translated_mr:
-            audio_files_mr = convert_text_to_speech(translated_mr, output_folder, "mr")
-            combined_mr = AudioSegment.empty()
-            for file in audio_files_mr:
-                try:
-                    seg = AudioSegment.from_wav(file)
-                    combined_mr += seg
-                except Exception as e:
-                    print(f"Error loading Marathi chunk {{file}}: {{e}}")
-            try:
+                        print("Skipping missing file: {{}}".format(f))
                 combined_mr.export(output_path_mr, format="mp3")
-                print(f"Marathi audio saved to: {{output_path_mr}}")
-            except Exception as e:
-                print("Error exporting Marathi audio: {{e}}")
+                print("Marathi audio saved to: {{}}".format(output_path_mr))
+                
+                for f in audio_files_mr:
+                    if os.path.exists(f):
+                        os.remove(f)
+            else:
+                print("No Marathi audio files were generated.")
         else:
-            print("Marathi translation failed.")
+            print("Translation to Marathi failed.")
         
+        # Translate and convert to Hindi
+        translated_text_hi = translate_text(text, target_lang="hi")
+        if translated_text_hi:
+            print("Translation to Hindi successful. Starting TTS...")
+            audio_files_hi = convert_text_to_speech(translated_text_hi, output_folder, "hi")
+            if audio_files_hi:
+                combined_hi = AudioSegment.empty()
+                for f in audio_files_hi:
+                    if os.path.exists(f):
+                        combined_hi += AudioSegment.from_wav(f)
+                    else:
+                        print("Skipping missing file: {{}}".format(f))
+                combined_hi.export(output_path_hi, format="mp3")
+                print("Hindi audio saved to: {{}}".format(output_path_hi))
+                
+                for f in audio_files_hi:
+                    if os.path.exists(f):
+                        os.remove(f)
+            else:
+                print("No Hindi audio files were generated.")
+        else:
+            print("Translation to Hindi failed.")
     except Exception as e:
-        print(f"Audio processing failed: {{e}}")
+        print("Audio processing failed: {{}}".format(str(e)))
 
-if __name__ == "__main__":
-    process_audio()
-"""
-    # Run the script in a subprocess (non-blocking)
+def translate_text(text, target_lang="mr"):
+    url = 'https://admin.models.ai4bharat.org/inference/translate'
+    payload = {{
+        "sourceLanguage": "en",
+        "targetLanguage": target_lang,
+        "input": text,
+        "task": "translation",
+        "serviceId": "ai4bharat/indictrans--gpu-t4",
+        "track": True
+    }}
+    headers = {{
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }}
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=100)
+        return response.json()["output"][0]["target"]
+    except Exception as e:
+        print("Translation to {{}} failed: {{}}".format(target_lang, str(e)))
+        return None
+
+def convert_text_to_speech(text, output_folder, language):
+    try:
+        chunks = split_text_into_chunks(text)
+        audio_files = []
+        
+        for idx, chunk in enumerate(chunks):
+            print("Processing {{}} chunk {{}}/{{}}".format(language, idx + 1, len(chunks)))
+            
+            # Preprocess chunk: Remove unsupported special characters
+            cleaned_chunk = re.sub(r"[©®™]", "", chunk)
+            if cleaned_chunk != chunk:
+                print("Removed unsupported special characters from chunk {{}}".format(idx + 1))
+            
+            model_id = "633c021bfb796d5e100d4ff9" if language == "hi" else "6576a25f4e7d42484da63537"
+            
+            payload = {{
+                "modelId": model_id,
+                "task": "tts",
+                "input": [{{"source": cleaned_chunk}}],
+                "gender": "female",
+                "userId": None
+            }}
+            
+            try:
+                response = requests.post(
+                    "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/compute",
+                    json=payload,
+                    headers={{"Content-Type": "application/json"}}
+                )
+                
+                if response.status_code == 200:
+                    audio_content = response.json().get("audio", [{{}}])[0].get("audioContent")
+                    if audio_content:
+                        chunk_file = os.path.join(output_folder, "temp_{{}}_chunk_{{}}.wav".format(language, idx + 1))
+                        with open(chunk_file, "wb") as f:
+                            f.write(base64.b64decode(audio_content))
+                        audio_files.append(chunk_file)
+                        print("Saved {{}} audio chunk {{}}".format(language, idx + 1))
+                    else:
+                        print("No audio content in {{}} chunk {{}}".format(language, idx + 1))
+                        save_failed_chunk(chunk, idx + 1, output_folder, language)
+                else:
+                    print("{{}} chunk {{}} failed: {{}} - {{}}".format(language, idx + 1, response.status_code, response.text))
+                    save_failed_chunk(chunk, idx + 1, output_folder, language)
+            except Exception as e:
+                print("Error processing {{}} chunk {{}}: {{}}".format(language, idx + 1, str(e)))
+                save_failed_chunk(chunk, idx + 1, output_folder, language)
+        
+        return audio_files
+    except Exception as e:
+        print("Error during {{}} TTS conversion: {{}}".format(language, str(e)))
+        return None
+
+def split_text_into_chunks(text, chunk_size=5000):
+    chunks = []
+    while len(text) > chunk_size:
+        split_index = text.rfind(" ", 0, chunk_size)
+        if split_index == -1:
+            split_index = chunk_size
+        chunks.append(text[:split_index].strip())
+        text = text[split_index:].strip()
+    chunks.append(text)
+    return chunks
+
+def save_failed_chunk(chunk, chunk_number, output_folder, language):
+    failed_chunk_file = os.path.join(output_folder, "failed_{{}}_chunk_{{}}.txt".format(language, chunk_number))
+    with open(failed_chunk_file, "w", encoding="utf-8") as f:
+        f.write(chunk)
+    print("Saved failed {{}} chunk {{}} to: {{}}".format(language, chunk_number, failed_chunk_file))
+
+process_audio()
+""".format(input_pdf=abs_file_path, output_folder=output_folder)
+
+
     subprocess.Popen(['python', '-c', script])
 
-try:
-    # Example call: trigger_audio_conversion(pdf_path, audio_filename)
-    pass
-except Exception as error:
-    print(f"Audio conversion trigger error: {str(error)}")
-        
 
 
 def trigger_translation(file_path):

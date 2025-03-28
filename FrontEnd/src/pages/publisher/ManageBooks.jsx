@@ -131,7 +131,7 @@ export default function ManageBooks() {
       toast.error(error.message);
     }
   };
-  
+
   const handleEditBook = async (e) => {
     e.preventDefault()
     try {
@@ -225,8 +225,8 @@ export default function ManageBooks() {
             <TableHead>Title</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Categories</TableHead>
-            <TableHead>Public</TableHead>
-            <TableHead>Approved</TableHead>
+            {/* <TableHead>Public</TableHead>
+            <TableHead>Approved</TableHead> */}
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -236,11 +236,11 @@ export default function ManageBooks() {
               <TableCell className="font-medium">{book.title}</TableCell>
               <TableCell>{book.description.substring(0, 50)}...</TableCell>
               <TableCell>{book.categories}</TableCell>
-              <TableCell>{book.is_public ? "Yes" : "No"}</TableCell>
-              <TableCell>{book.is_approved ? "Yes" : "No"}</TableCell>
+              {/* <TableCell>{book.is_public ? "Yes" : "No"}</TableCell>
+              <TableCell>{book.is_approved ? "Yes" : "No"}</TableCell> */}
               <TableCell>
                 <div className="flex space-x-2">
-                  <Button
+                  {/* <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
@@ -249,7 +249,7 @@ export default function ManageBooks() {
                     }}
                   >
                     <Pencil className="h-4 w-4 mr-1" /> Edit
-                  </Button>
+                  </Button> */}
                   <Button variant="outline" size="sm" onClick={() => handleDeleteBook(book.book_id)}>
                     <Trash className="h-4 w-4 mr-1" /> Delete
                   </Button>

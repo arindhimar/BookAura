@@ -51,19 +51,24 @@ def register():
     
     print(data)
     
-    required_fields = {'username', 'email', 'password', 'role_id'}
+    required_fields = {'name', 'email', 'password', 'role_name'}
 
     if not all(field in data for field in required_fields):
         return jsonify({'error': 'Missing required fields'}), 400
-
-    username, email, password, role_id = data['username'], data['email'], data['password'], int(data['role_id'])
-
+    
+    username, email, password, role_name = data['name'], data['email'], data['password'], data['role_name']
+    role_id = 0
+    if role_name == "Normal User":
+        role_id = 4
+        
     
     if not roles_model.is_valid_role(role_id):
         return jsonify({'error': 'Invalid role ID'}), 400
     if users_model.fetch_user_by_email(email):
         return jsonify({'error': 'Email is already registered'}), 400
 
+
+    
     hashed_password = encode_password(password)
     user_id = users_model.create_user(username, email, hashed_password, role_id)
     print(user_id)
