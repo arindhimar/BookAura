@@ -281,7 +281,7 @@ function AppRoutes() {
         path="/settings"
         element={
           <ProtectedRoute allowedRoles={[1, 2, 3, 4, 5]}>
-            <DashboardLayout userRole={user?.role_id === 1 ? "admin" : user?.role_id === 2 ? "publisher" : "author"}>
+            <DashboardLayout userRole={user?.role_id === 1 ? "admin" : user?.role_id === 2 ? "publisher" : "author" || "moderator"}>
               <Settings />
             </DashboardLayout>
           </ProtectedRoute>

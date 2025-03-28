@@ -6,6 +6,7 @@ import { Switch } from "../components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card"
 import { toast } from "react-toastify"
+import { useNavigate } from "react-router-dom"
 
 export default function Settings() {
   const [notifications, setNotifications] = useState(true)
@@ -15,8 +16,14 @@ export default function Settings() {
   const [password, setPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
 
   useEffect(() => {
+
+    if (!localStorage.getItem("token")) {
+      navigate("/")
+    }
+
     fetchUserData()
   }, [])
 
@@ -123,7 +130,7 @@ export default function Settings() {
       <Tabs defaultValue="account" className="w-full">
         <TabsList>
           <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          {/* <TabsTrigger value="notifications">Notifications</TabsTrigger> */}
           <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
         <TabsContent value="account">

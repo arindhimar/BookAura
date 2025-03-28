@@ -158,12 +158,14 @@ export default function UserNavbar() {
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
+                <Link to="/settings" className="block p-2 hover:bg-primary/10">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                </Link>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer">
+                {/* <DropdownMenuItem className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   <span>Author</span>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuItem className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>

@@ -1,94 +1,96 @@
-import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
-import { Clock, Bookmark } from "lucide-react";
-import UserNavbar from "../../components/UserNavbar";
-import { useNavigate } from "react-router-dom";
+"use client"
+
+import { motion } from "framer-motion"
+import { useState, useEffect } from "react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs"
+import { Clock, Bookmark } from "lucide-react"
+import UserNavbar from "../../components/UserNavbar"
+import { useNavigate } from "react-router-dom"
 
 const tabs = [
   { id: "history", label: "Reading History", icon: Clock },
   { id: "bookmarks", label: "Bookmarks", icon: Bookmark },
-];
+]
 
 export default function Library() {
-  const [activeTab, setActiveTab] = useState("history");
-  const [bookmarks, setBookmarks] = useState([]);
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("history")
+  const [bookmarks, setBookmarks] = useState([])
+  const [history, setHistory] = useState([])
+  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!localStorage.getItem("token")) {
-      navigate("/");
+      navigate("/")
     }
 
     const fetchReadingHistory = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token")
 
         // Fetch reading history
         const historyRes = await fetch(`${import.meta.env.VITE_BASE_API_URL}/reading_history/user`, {
           headers: { Authorization: `${token}` },
-        });
+        })
 
         if (!historyRes.ok) {
-          throw new Error("Failed to fetch reading history");
+          throw new Error("Failed to fetch reading history")
         }
 
-        const historyData = await historyRes.json();
+        const historyData = await historyRes.json()
 
         // Map the response to match the expected format
         const formattedHistory = historyData.map((historyItem) => ({
           ...historyItem.book_details, // Spread book details
           history_id: historyItem.history_id,
           last_read_at: historyItem.last_read_at,
-        }));
+        }))
 
-        setHistory(formattedHistory);
+        setHistory(formattedHistory)
       } catch (error) {
-        console.error("Error fetching reading history:", error);
+        console.error("Error fetching reading history:", error)
       }
-    };
+    }
 
     const fetchBookmarks = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token")
 
         // Fetch bookmarks
         const bookmarksRes = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/user`, {
           headers: { Authorization: `${token}` },
-        });
+        })
 
         if (!bookmarksRes.ok) {
-          throw new Error("Failed to fetch bookmarks");
+          throw new Error("Failed to fetch bookmarks")
         }
 
-        const bookmarksData = await bookmarksRes.json();
+        const bookmarksData = await bookmarksRes.json()
 
         // Map the response to match the expected format
         const formattedBookmarks = bookmarksData.map((bookmark) => ({
           ...bookmark.book_details, // Spread book details
           bookmark_id: bookmark.bookmark_id,
           created_at: bookmark.created_at,
-        }));
+        }))
 
-        setBookmarks(formattedBookmarks);
+        setBookmarks(formattedBookmarks)
       } catch (error) {
-        console.error("Error fetching bookmarks:", error);
+        console.error("Error fetching bookmarks:", error)
       }
-    };
+    }
 
     const fetchData = async () => {
-      setLoading(true);
+      setLoading(true)
 
       // Fetch reading history and bookmarks
-      await Promise.all([fetchReadingHistory(), fetchBookmarks()]);
+      await Promise.all([fetchReadingHistory(), fetchBookmarks()])
 
-      setLoading(false);
-    };
+      setLoading(false)
+    }
 
-    fetchData();
-  }, []);
+    fetchData()
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -124,16 +126,16 @@ export default function Library() {
         </Tabs>
       </main>
     </div>
-  );
+  )
 }
 
 function BookGrid({ books, loading, title, navigate }) {
   if (loading) {
-    return <p className="text-center text-muted-foreground">Loading {title}...</p>;
+    return <p className="text-center text-muted-foreground">Loading {title}...</p>
   }
 
   if (!books.length) {
-    return <p className="text-center text-muted-foreground">No books in {title}.</p>;
+    return <p className="text-center text-muted-foreground">No books in {title}.</p>
   }
 
   return (
@@ -145,28 +147,30 @@ function BookGrid({ books, loading, title, navigate }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
         >
-          <div className="modern-card group cursor-pointer">
-            <div
-              className="relative aspect-[3/4] overflow-hidden rounded-t-2xl"
-              onClick={() => navigate(`/book/${book.book_id}`)}
-            >
+          <div
+            className="group cursor-pointer bg-card text-card-foreground shadow-sm rounded-xl border"
+            onClick={() => navigate(`/book/${book.book_id}`)}
+          >
+            <div className="relative aspect-[3/4] overflow-hidden rounded-t-xl">
               <img
-                src={ "http://127.0.0.1:5000/books/" +  book.cover_url || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
+                src={
+                  "http://127.0.0.1:5000/books/" + book.cover_url ||
+                  "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"
+                }
                 alt={book.title}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
             <div className="p-4">
-              <h3 className="text-lg font-semibold group-hover:text-primary transition-colors duration-300">
+              <h3 className="font-semibold mb-1 line-clamp-1 group-hover:text-primary transition-colors duration-300">
                 {book.title}
               </h3>
-              <p className="text-sm text-muted-foreground">{book.author_name || "Unknown Author"}</p>
-              {/* <p className="text-sm text-muted-foreground">{book.description || "No description available"}</p> */}
+              <p className="text-sm text-muted-foreground mb-1 line-clamp-1">{book.author_name || "Unknown Author"}</p>
             </div>
           </div>
         </motion.div>
       ))}
     </div>
-  );
+  )
 }
+

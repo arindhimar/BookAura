@@ -82,49 +82,40 @@ export default function BookDetailsComponent({ book }) {
   useEffect(() => {
     const audio = audioRef.current
 
-    if (audio) {
-      const updateProgress = () => {
-        if (audio.duration) {
-          setAudioProgress((audio.currentTime / audio.duration) * 100)
-          setCurrentTime(audio.currentTime)
-        }
+    const updateProgress = () => {
+      if (audio && audio.duration) {
+        setCurrentTime(audio.currentTime)
+        setAudioProgress((audio.currentTime / audio.duration) * 100)
       }
+    }
 
-      const handleEnded = () => {
-        setIsPlaying(false)
-        setAudioProgress(0)
-        setCurrentTime(0)
-      }
-
-      const handleLoadedMetadata = () => {
+    const handleLoadedMetadata = () => {
+      if (audio) {
         setDuration(audio.duration)
         setIsAudioLoaded(true)
       }
+    }
 
-      const handleLoadedData = () => {
-        setIsAudioLoaded(true)
-      }
+    const handleEnded = () => {
+      setIsPlaying(false)
+      setAudioProgress(0)
+      setCurrentTime(0)
+    }
 
-      const handleError = (e) => {
-        console.error("Audio error:", e)
-        setIsAudioLoaded(false)
-      }
+    if (audio) {
+      audio.addEventListener('timeupdate', updateProgress)
+      audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+      audio.addEventListener('ended', handleEnded)
+    }
 
-      audio.addEventListener("timeupdate", updateProgress)
-      audio.addEventListener("ended", handleEnded)
-      audio.addEventListener("loadedmetadata", handleLoadedMetadata)
-      audio.addEventListener("loadeddata", handleLoadedData)
-      audio.addEventListener("error", handleError)
-
-      return () => {
-        audio.removeEventListener("timeupdate", updateProgress)
-        audio.removeEventListener("ended", handleEnded)
-        audio.removeEventListener("loadedmetadata", handleLoadedMetadata)
-        audio.removeEventListener("loadeddata", handleLoadedData)
-        audio.removeEventListener("error", handleError)
+    return () => {
+      if (audio) {
+        audio.removeEventListener('timeupdate', updateProgress)
+        audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+        audio.removeEventListener('ended', handleEnded)
       }
     }
-  }, [])
+  }, [audioRef.current?.src])
 
   useEffect(() => {
     if (audioRef.current) {
@@ -194,17 +185,15 @@ export default function BookDetailsComponent({ book }) {
     if (!book.audioUrl) return null
 
     const baseUrl = book.audioUrl.replace("audio_uploads/", "")
+    const [filename, extension] = baseUrl.split('.')
+    const cleanName = filename.replace(/_en$/, '')
 
     if (selectedLanguage === "english") {
-      return `${import.meta.env.VITE_BASE_API_URL}/books/audio_uploads/${baseUrl}`
+      return `${import.meta.env.VITE_BASE_API_URL}/books/audio_uploads/${cleanName}_en.${extension}`
     }
 
     const langCode = selectedLanguage === "hindi" ? "hi" : "mr"
-    const lastDotIndex = baseUrl.lastIndexOf(".")
-    const urlWithoutExt = baseUrl.substring(0, lastDotIndex)
-    const extension = baseUrl.substring(lastDotIndex)
-
-    return `${import.meta.env.VITE_BASE_API_URL}/books/audio/${urlWithoutExt}_${langCode}${extension}`
+    return `${import.meta.env.VITE_BASE_API_URL}/books/audio_uploads/${cleanName}_${langCode}.${extension}`
   }
 
   const togglePlayPause = async () => {
@@ -220,7 +209,7 @@ export default function BookDetailsComponent({ book }) {
         if (!audio.src || audio.src !== audioUrl) {
           setIsAudioLoaded(false)
           audio.src = audioUrl
-          audio.load()
+          await audio.load()
           setAudioProgress(0)
           setCurrentTime(0)
         }
@@ -242,10 +231,8 @@ export default function BookDetailsComponent({ book }) {
 
   const handleProgressChange = (value) => {
     if (!audioRef.current || !duration) return
-
     const newTime = (value[0] / 100) * duration
     audioRef.current.currentTime = newTime
-    setAudioProgress(value[0])
     setCurrentTime(newTime)
   }
 
@@ -275,7 +262,6 @@ export default function BookDetailsComponent({ book }) {
 
   const formatTime = (timeInSeconds) => {
     if (isNaN(timeInSeconds) || timeInSeconds === undefined) return "0:00"
-
     const minutes = Math.floor(timeInSeconds / 60)
     const seconds = Math.floor(timeInSeconds % 60)
     return `${minutes}:${seconds.toString().padStart(2, "0")}`
@@ -291,6 +277,15 @@ export default function BookDetailsComponent({ book }) {
     } else {
       navigator.clipboard.writeText(window.location.href)
       alert("Link copied to clipboard!")
+    }
+  }
+
+  const handleLanguageChange = (value) => {
+    setSelectedLanguage(value)
+    if (audioRef.current) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+      setShowAudioPlayer(false)
     }
   }
 
@@ -315,7 +310,7 @@ export default function BookDetailsComponent({ book }) {
               <div className="w-full max-w-xs mt-6 space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Language</label>
-                  <Select value={selectedLanguage} onValueChange={(value) => setSelectedLanguage(value)}>
+                  <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select Language" />
                     </SelectTrigger>

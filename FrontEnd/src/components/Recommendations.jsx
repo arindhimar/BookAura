@@ -1,9 +1,9 @@
+"use client"
+
 import { Card, CardContent } from "./ui/card"
-import { Button } from "./ui/button"
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Eye, MoreVertical, Bookmark, BookmarkCheck, Share, Heart } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
+import { Eye } from "lucide-react"
 import { useState, useEffect } from "react"
 
 export default function Recommendations({ books, loading }) {
@@ -100,7 +100,7 @@ function BookCard({ book, index }) {
       transition={{ delay: index * 0.1 }}
       className="group"
     >
-      <Card className="cursor-pointer relative" onClick={() => navigate(`/book/${book.book_id}`)}>
+      <Card className="cursor-pointer relative rounded-xl" onClick={() => navigate(`/book/${book.book_id}`)}>
         {/* <div className="absolute top-2 right-2 z-10 flex space-x-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -139,9 +139,10 @@ function BookCard({ book, index }) {
           </DropdownMenu>
         </div> */}
 
-        <div className="relative aspect-[3/4] overflow-hidden">
+        <div className="relative aspect-[3/4] overflow-hidden rounded-t-xl">
           <img
-            src={"http://127.0.0.1:5000/books/"+book.cover_url ||
+            src={
+              "http://127.0.0.1:5000/books/" + book.cover_url ||
               "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"
             }
             alt={book.title}
@@ -160,3 +161,4 @@ function BookCard({ book, index }) {
     </motion.div>
   )
 }
+

@@ -15,6 +15,7 @@ class BooksModel:
             password="root"
         )
 
+
     def fetch_all_books(self):
         with self.conn.cursor(dictionary=True) as cur:
             cur.execute("""
@@ -32,7 +33,7 @@ class BooksModel:
                     b.uploaded_by_role,
                     b.coverUrl,
                     COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
-                    v.book_view AS views  -- Include book views
+                    COALESCE(SUM(v.book_view), 0) AS views  # Key change: SUM views
                 FROM 
                     books b
                 LEFT JOIN 
@@ -42,18 +43,15 @@ class BooksModel:
                 LEFT JOIN 
                     users u ON b.user_id = u.user_id
                 LEFT JOIN 
-                    views v ON b.book_id = v.book_id  -- Join the views table
+                    views v ON b.book_id = v.book_id 
                 GROUP BY 
-                    b.book_id, b.user_id, u.username, b.title, b.description, b.fileUrl, b.audioUrl, 
-                    b.is_public, b.is_approved, b.uploaded_at, b.uploaded_by_role, v.book_view
+                    b.book_id  # Group only by book_id (or essential columns)
             """)
             books = cur.fetchall()
             return books
-
-
     def fetch_book_by_id(self, book_id):
         with self.conn.cursor(dictionary=True) as cur:
-            # Fetch the main book details with author name
+            # Fetch the main book details with author name and views count
             cur.execute("""
                 SELECT 
                     b.book_id, 
@@ -68,7 +66,8 @@ class BooksModel:
                     b.uploaded_at, 
                     b.uploaded_by_role,
                     b.coverUrl,
-                    COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories
+                    COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
+                    v.book_view AS views  -- Include book views count
                 FROM 
                     books b
                 LEFT JOIN 
@@ -77,15 +76,18 @@ class BooksModel:
                     categories c ON bc.category_id = c.category_id
                 LEFT JOIN 
                     users u ON b.user_id = u.user_id
+                LEFT JOIN 
+                    views v ON b.book_id = v.book_id  -- Join the views table
                 WHERE 
                     b.book_id = %s
                 GROUP BY 
-                    b.book_id
+                    b.book_id, b.user_id, u.username, b.title, b.description, b.fileUrl, b.audioUrl, 
+                    b.is_public, b.is_approved, b.uploaded_at, b.uploaded_by_role, v.book_view
             """, (book_id,))
             
             book = cur.fetchone()
             return book
-
+        
     def fetch_public_books(self):
         with self.conn.cursor(dictionary=True) as cur:
             cur.execute("""
@@ -388,7 +390,7 @@ class BooksModel:
     def fetch_complete_book(self, book_id):
         """Fetches a book along with related books based on categories and author."""
         with self.conn.cursor(dictionary=True) as cur:
-            # Fetch the main book details
+            # Fetch the main book details with views count
             cur.execute("""
                 SELECT 
                     b.book_id, 
@@ -403,7 +405,8 @@ class BooksModel:
                     b.uploaded_at, 
                     b.uploaded_by_role,
                     b.coverUrl,
-                    COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories
+                    COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
+                    v.book_view AS views  -- Include book views count
                 FROM 
                     books b
                 LEFT JOIN 
@@ -412,10 +415,13 @@ class BooksModel:
                     categories c ON bc.category_id = c.category_id
                 LEFT JOIN 
                     users u ON b.user_id = u.user_id
+                LEFT JOIN 
+                    views v ON b.book_id = v.book_id  -- Join the views table
                 WHERE 
                     b.book_id = %s
                 GROUP BY 
-                    b.book_id
+                    b.book_id, b.user_id, u.username, b.title, b.description, b.fileUrl, b.audioUrl, 
+                    b.is_public, b.is_approved, b.uploaded_at, b.uploaded_by_role, v.book_view
             """, (book_id,))
             
             book = cur.fetchone()
@@ -425,7 +431,7 @@ class BooksModel:
 
             category_names = book['categories'].split(', ') if book['categories'] else []
 
-            # Fetch related books by categories
+            # Fetch related books by categories with views count
             if category_names:
                 placeholders = ', '.join(['%s'] * len(category_names))
                 cur.execute(f"""
@@ -433,30 +439,38 @@ class BooksModel:
                         b.book_id, 
                         b.title, 
                         b.fileUrl,
-                        u.username AS author_name  -- Include author name
+                        u.username AS author_name,
+                        v.book_view AS views  -- Include views count
                     FROM books b
                     LEFT JOIN book_category bc ON b.book_id = bc.book_id
                     LEFT JOIN categories c ON bc.category_id = c.category_id
-                    LEFT JOIN users u ON b.user_id = u.user_id  -- Join users table
+                    LEFT JOIN users u ON b.user_id = u.user_id
+                    LEFT JOIN views v ON b.book_id = v.book_id  -- Join views table
                     WHERE c.category_name IN ({placeholders}) 
                         AND b.book_id != %s  -- Exclude current book
+                    GROUP BY 
+                        b.book_id, b.title, b.fileUrl, u.username, v.book_view
                     LIMIT 5;
                 """, tuple(category_names) + (book_id,))
                 related_books_by_category = cur.fetchall()
             else:
                 related_books_by_category = []
 
-            # Fetch related books by the same author
+            # Fetch related books by the same author with views count
             cur.execute("""
                 SELECT 
                     b.book_id, 
                     b.title, 
                     b.fileUrl,
-                    u.username AS author_name  -- Include author name
+                    u.username AS author_name,
+                    v.book_view AS views  -- Include views count
                 FROM books b
-                LEFT JOIN users u ON b.user_id = u.user_id  -- Join users table
+                LEFT JOIN users u ON b.user_id = u.user_id
+                LEFT JOIN views v ON b.book_id = v.book_id  -- Join views table
                 WHERE b.user_id = %s 
-                    AND b.book_id != %s  
+                    AND b.book_id != %s
+                GROUP BY 
+                    b.book_id, b.title, b.fileUrl, u.username, v.book_view
                 LIMIT 5;
             """, (book['author_id'], book_id))
             related_books_by_author = cur.fetchall()
@@ -466,7 +480,6 @@ class BooksModel:
             "related_books_by_category": related_books_by_category,
             "related_books_by_author": related_books_by_author
         }
-    
     def fetch_books_by_publisher(self, publisher_id):
         with self.conn.cursor(dictionary=True) as cur:
             cur.execute("""
