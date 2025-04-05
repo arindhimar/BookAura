@@ -80,5 +80,66 @@ class UsersModel:
         self.conn.commit()
         cur.close()
     
+    def count_users_by_role(self, role_id):
+        query = "SELECT COUNT(*) as count FROM users WHERE role_id = %s"
+        self.cursor.execute(query, (role_id,))
+        result = self.cursor.fetchone()
+        return result['count'] if result else 0
+    
+    def count_active_users_by_role(self, role_id, time_range):
+        days = 7
+        if time_range == '30d':
+            days = 30
+        elif time_range == '90d':
+            days = 90
+        
+        current_date = datetime.now()
+        period_start = current_date - timedelta(days=days)
+        
+        query = """
+        SELECT COUNT(DISTINCT u.user_id) as count 
+        FROM users u
+        JOIN reading_history rh ON u.user_id = rh.user_id
+        WHERE u.role_id = %s AND rh.last_read_at >= %s
+        """
+        self.cursor.execute(query, (role_id, period_start))
+        result = self.cursor.fetchone()
+        return result['count'] if result else 0
+    
+    def get_growth_percentage_by_role(self, role_id, time_range):
+        days = 7
+        if time_range == '30d':
+            days = 30
+        elif time_range == '90d':
+            days = 90
+        
+        current_date = datetime.now()
+        previous_period_end = current_date - timedelta(days=days)
+        previous_period_start = previous_period_end - timedelta(days=days)
+        
+        # Get current period count
+        query = """
+        SELECT COUNT(*) as count FROM users 
+        WHERE role_id = %s AND created_at >= %s AND created_at <= %s
+        """
+        self.cursor.execute(query, (role_id, previous_period_end, current_date))
+        current_count = self.cursor.fetchone()['count'] or 0
+        
+        # Get previous period count
+        query = """
+        SELECT COUNT(*) as count FROM users 
+        WHERE role_id = %s AND created_at >= %s AND created_at <= %s
+        """
+        self.cursor.execute(query, (role_id, previous_period_start, previous_period_end))
+        previous_count = self.cursor.fetchone()['count'] or 1  # Avoid division by zero
+        
+        # Calculate growth percentage
+        growth = ((current_count - previous_count) / previous_count) * 100
+        
+        # Format as string with sign
+        return f"{'+' if growth >= 0 else ''}{growth:.1f}%"
+
+
+    
     def close_connection(self):
         self.conn.close()

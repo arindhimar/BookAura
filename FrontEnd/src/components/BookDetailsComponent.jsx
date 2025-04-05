@@ -2,7 +2,22 @@
 
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
-import { Bookmark, BookmarkCheck, Headphones, Volume2, VolumeX, Play, Pause, SkipBack, SkipForward, X, MoreVertical, Eye, Share, Heart } from "lucide-react"
+import {
+  Bookmark,
+  BookmarkCheck,
+  Headphones,
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  X,
+  MoreVertical,
+  Eye,
+  Share,
+  Heart,
+} from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect, useRef } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -25,19 +40,22 @@ export default function BookDetailsComponent({ book }) {
   const [playbackRate, setPlaybackRate] = useState(1)
   const [showAudioPlayer, setShowAudioPlayer] = useState(false)
   const [isAudioLoaded, setIsAudioLoaded] = useState(false)
+  const [error, setError] = useState(null)
   const audioRef = useRef(null)
 
   useEffect(() => {
     const fetchBookmarkStatus = async () => {
+      if (!book?.book_id) return
+
       setIsLoadingBookmark(true)
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`,
-          {
-            headers: { Authorization: `${localStorage.getItem("token")}` },
-            method: "GET",
-          }
-        )
+        const token = localStorage.getItem("token")
+        if (!token) return
+
+        const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book.book_id}/user`, {
+          headers: { Authorization: token },
+          method: "GET",
+        })
 
         if (response.ok) {
           const data = await response.json()
@@ -45,6 +63,7 @@ export default function BookDetailsComponent({ book }) {
         }
       } catch (error) {
         console.error("Error fetching bookmark status:", error)
+        setError("Failed to check if book is bookmarked")
       } finally {
         setIsLoadingBookmark(false)
       }
@@ -54,21 +73,23 @@ export default function BookDetailsComponent({ book }) {
   }, [book])
 
   const handleBookmarks = async () => {
+    if (isLoadingBookmark) return
+
     const newBookmarkState = !isBookmarked
     setIsBookmarked(newBookmarkState)
-    
+
     try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
       const method = newBookmarkState ? "POST" : "DELETE"
-      const response = await fetch(
-        `${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`,
-        {
-          method,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `${localStorage.getItem("token")}`,
-          },
-        }
-      )
+      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${book?.book_id}/user`, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+      })
 
       if (!response.ok) {
         throw new Error("Bookmark update failed")
@@ -76,6 +97,7 @@ export default function BookDetailsComponent({ book }) {
     } catch (error) {
       console.error("Error updating bookmark:", error)
       setIsBookmarked(!newBookmarkState)
+      setError("Failed to update bookmark status")
     }
   }
 
@@ -103,16 +125,16 @@ export default function BookDetailsComponent({ book }) {
     }
 
     if (audio) {
-      audio.addEventListener('timeupdate', updateProgress)
-      audio.addEventListener('loadedmetadata', handleLoadedMetadata)
-      audio.addEventListener('ended', handleEnded)
+      audio.addEventListener("timeupdate", updateProgress)
+      audio.addEventListener("loadedmetadata", handleLoadedMetadata)
+      audio.addEventListener("ended", handleEnded)
     }
 
     return () => {
       if (audio) {
-        audio.removeEventListener('timeupdate', updateProgress)
-        audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
-        audio.removeEventListener('ended', handleEnded)
+        audio.removeEventListener("timeupdate", updateProgress)
+        audio.removeEventListener("loadedmetadata", handleLoadedMetadata)
+        audio.removeEventListener("ended", handleEnded)
       }
     }
   }, [audioRef.current?.src])
@@ -131,11 +153,14 @@ export default function BookDetailsComponent({ book }) {
 
   const addView = async () => {
     try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
       const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books_views/book/${book.book_id}/view`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `${localStorage.getItem("token")}`,
+          Authorization: token,
         },
       })
 
@@ -147,11 +172,14 @@ export default function BookDetailsComponent({ book }) {
 
   const addReadingHistory = async () => {
     try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
       const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/reading_history/book/${book.book_id}/user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `${localStorage.getItem("token")}`,
+          Authorization: token,
         },
       })
 
@@ -163,11 +191,21 @@ export default function BookDetailsComponent({ book }) {
 
   const handleReadNow = async () => {
     try {
-      const filePath = book.fileUrl.replace("uploads/", "")
-      const language = selectedLanguage
-      const url = `${import.meta.env.VITE_BASE_API_URL}/books/${filePath}?language=${language}`
+      const token = localStorage.getItem("token")
+      if (!token) return
 
-      const response = await fetch(url)
+      const filePath = book.fileUrl || book.file_url
+      if (!filePath) {
+        throw new Error("Book file not available")
+      }
+
+      const cleanPath = filePath.replace("uploads/", "")
+      const language = selectedLanguage
+      const url = `${import.meta.env.VITE_BASE_API_URL}/books/${cleanPath}?language=${language}`
+
+      const response = await fetch(url, {
+        headers: { Authorization: token },
+      })
 
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`)
@@ -178,15 +216,16 @@ export default function BookDetailsComponent({ book }) {
       await addReadingHistory()
     } catch (err) {
       console.error("Error fetching PDF:", err)
+      setError("Failed to open book. Please try again.")
     }
   }
 
   const getAudioUrl = () => {
-    if (!book.audioUrl) return null
+    if (!book.audioUrl && !book.audio_url) return null
 
-    const baseUrl = book.audioUrl.replace("audio_uploads/", "")
-    const [filename, extension] = baseUrl.split('.')
-    const cleanName = filename.replace(/_en$/, '')
+    const baseUrl = (book.audioUrl || book.audio_url).replace("audio_uploads/", "")
+    const [filename, extension] = baseUrl.split(".")
+    const cleanName = filename.replace(/_en$/, "")
 
     if (selectedLanguage === "english") {
       return `${import.meta.env.VITE_BASE_API_URL}/books/audio_uploads/${cleanName}_en.${extension}`
@@ -206,6 +245,10 @@ export default function BookDetailsComponent({ book }) {
     } else {
       try {
         const audioUrl = getAudioUrl()
+        if (!audioUrl) {
+          throw new Error("Audio not available for this book")
+        }
+
         if (!audio.src || audio.src !== audioUrl) {
           setIsAudioLoaded(false)
           audio.src = audioUrl
@@ -220,6 +263,7 @@ export default function BookDetailsComponent({ book }) {
         await addReadingHistory()
       } catch (err) {
         console.error("Error playing audio:", err)
+        setError("Failed to play audio. Please try again.")
       }
     }
   }
@@ -289,7 +333,11 @@ export default function BookDetailsComponent({ book }) {
     }
   }
 
-  const hasAudio = book && book.audioUrl
+  const hasAudio = book && (book.audioUrl || book.audio_url)
+  const coverUrl =
+    book?.coverUrl || book?.cover_url
+      ? `${import.meta.env.VITE_BASE_API_URL}/books/${book.coverUrl || book.cover_url}`
+      : "/placeholder.svg?height=600&width=400"
 
   if (!book) {
     return <p className="text-center text-red-500">Book not found.</p>
@@ -302,7 +350,7 @@ export default function BookDetailsComponent({ book }) {
           <div className="sticky top-24">
             <div className="flex flex-col items-center">
               <img
-                src={"http://127.0.0.1:5000/books/"+book.coverUrl || "/placeholder.svg"}
+                src={coverUrl || "/placeholder.svg"}
                 alt={book.title}
                 className="w-full max-w-xs rounded-lg shadow-lg object-cover aspect-[2/3]"
               />
@@ -349,7 +397,13 @@ export default function BookDetailsComponent({ book }) {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="icon" onClick={handleBookmarks} disabled={isLoadingBookmark} className="flex-shrink-0">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleBookmarks}
+                disabled={isLoadingBookmark}
+                className="flex-shrink-0"
+              >
                 {isBookmarked ? <BookmarkCheck className="h-4 w-4 text-primary" /> : <Bookmark className="h-4 w-4" />}
               </Button>
 
@@ -540,3 +594,4 @@ export default function BookDetailsComponent({ book }) {
     </div>
   )
 }
+

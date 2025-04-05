@@ -1,14 +1,27 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog"
 import { Badge } from "../../components/ui/badge"
-import { Eye, Flag, Check, X } from "lucide-react"
+import { Flag, Check, X, Loader, Search, Filter, MoreHorizontal, BookOpen } from "lucide-react"
 import { toast } from "react-toastify"
+import { Textarea } from "../../components/ui/textarea"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "../../components/ui/select"
 
 export default function ManagePublishers() {
   const [publishers, setPublishers] = useState([])
+  const [filteredPublishers, setFilteredPublishers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedPublisher, setSelectedPublisher] = useState(null)
@@ -20,11 +33,39 @@ export default function ManagePublishers() {
   const [feedback, setFeedback] = useState("")
   const [flagReason, setFlagReason] = useState("")
   const [password, setPassword] = useState("")
-  //const { toast } = useToast()
+  const [publisherBooks, setPublisherBooks] = useState([])
+  const [loadingBooks, setLoadingBooks] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
 
   useEffect(() => {
     fetchPublishers()
   }, [])
+
+  useEffect(() => {
+    // Filter publishers based on search query and status filter
+    let filtered = [...publishers]
+
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (publisher) =>
+          publisher.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          publisher.email.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    }
+
+    if (statusFilter !== "all") {
+      if (statusFilter === "approved") {
+        filtered = filtered.filter((publisher) => publisher.is_approved === 1)
+      } else if (statusFilter === "pending") {
+        filtered = filtered.filter((publisher) => publisher.is_approved === 0)
+      } else if (statusFilter === "flagged") {
+        filtered = filtered.filter((publisher) => publisher.is_flagged === 1)
+      }
+    }
+
+    setFilteredPublishers(filtered)
+  }, [publishers, searchQuery, statusFilter])
 
   const fetchPublishers = async () => {
     try {
@@ -32,7 +73,7 @@ export default function ManagePublishers() {
       const token = localStorage.getItem("token")
       const publishersResponse = await fetch(`${import.meta.env.VITE_BASE_API_URL}/publishers/`, {
         headers: {
-          Authorization: ` ${token}`,
+          Authorization: token,
         },
       })
       if (!publishersResponse.ok) {
@@ -44,7 +85,7 @@ export default function ManagePublishers() {
         publishersData.map(async (publisher) => {
           const userResponse = await fetch(`${import.meta.env.VITE_BASE_API_URL}/users/${publisher.user_id}`, {
             headers: {
-              Authorization: ` ${token}`,
+              Authorization: token,
             },
           })
           if (!userResponse.ok) {
@@ -59,15 +100,43 @@ export default function ManagePublishers() {
       )
 
       setPublishers(detailedPublishers)
+      setFilteredPublishers(detailedPublishers)
       setLoading(false)
     } catch (err) {
       setError(err.message)
       setLoading(false)
+      toast.error("Failed to load publishers. Please try again later.")
+    }
+  }
+
+  const fetchPublisherBooks = async (publisherId) => {
+    try {
+      setLoadingBooks(true)
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/publisher/${publisherId}`, {
+        headers: {
+          Authorization: token,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch publisher books")
+      }
+
+      const data = await response.json()
+      setPublisherBooks(data)
+      setLoadingBooks(false)
+    } catch (error) {
+      console.error("Error fetching publisher books:", error)
+      setPublisherBooks([])
+      setLoadingBooks(false)
+      toast.error("Failed to load publisher books. Please try again later.")
     }
   }
 
   const handleViewBooks = (publisher) => {
     setSelectedPublisher(publisher)
+    fetchPublisherBooks(publisher.publisher_id)
     setIsViewBooksOpen(true)
   }
 
@@ -100,12 +169,12 @@ export default function ManagePublishers() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: ` ${token}`,
+            Authorization: token,
           },
           body: JSON.stringify({
             ...data,
             password,
-            publisher_id: selectedPublisher.publisher_id, // Add this line
+            publisher_id: selectedPublisher.publisher_id,
           }),
         },
       )
@@ -157,78 +226,192 @@ export default function ManagePublishers() {
   }
 
   if (loading) {
-    return <div>Loading...</div>
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading publishers...</span>
+      </div>
+    )
   }
 
   if (error) {
-    return <div>Error: {error}</div>
+    return (
+      <div className="p-4">
+        <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded">
+          <p>Error: {error}</p>
+          <button
+            onClick={fetchPublishers}
+            className="mt-2 bg-red-100 dark:bg-red-800 hover:bg-red-200 dark:hover:bg-red-700 text-red-800 dark:text-red-200 font-semibold py-1 px-3 rounded text-sm"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-5">Manage Publishers</h1>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Username</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {publishers.map((publisher) => (
-            <TableRow key={publisher.publisher_id}>
-              <TableCell>{publisher.username}</TableCell>
-              <TableCell>{publisher.email}</TableCell>
-              <TableCell>
-                <Badge variant={publisher.is_approved === 1 ? "success" : "warning"}>
-                  {publisher.is_approved === 1 ? "Approved" : "Pending"}
-                </Badge>
-                {publisher.is_flagged === 1 && (
-                  <Badge variant="destructive" className="ml-2">
-                    Flagged
-                  </Badge>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => handleViewBooks(publisher)}>
-                    <Eye className="h-4 w-4 mr-1" /> View Books
-                  </Button>
-                  {publisher.is_approved === 0 && (
-                    <>
-                      <Button variant="outline" size="sm" onClick={() => handleApprove(publisher)}>
-                        <Check className="h-4 w-4 mr-1" /> Approve
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleReject(publisher)}>
-                        <X className="h-4 w-4 mr-1" /> Reject
-                      </Button>
-                    </>
-                  )}
-                  {publisher.is_flagged === 0 ? (
-                    <Button variant="outline" size="sm" onClick={() => handleFlag(publisher)}>
-                      <Flag className="h-4 w-4 mr-1" /> Flag
-                    </Button>
-                  ) : (
-                    <Button variant="outline" size="sm" onClick={() => handleUnflag(publisher)}>
-                      <Flag className="h-4 w-4 mr-1" /> Unflag
-                    </Button>
-                  )}
-                </div>
-              </TableCell>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <h1 className="text-3xl font-bold">Manage Publishers</h1>
+        <div className="flex flex-col md:flex-row gap-4 mt-4 md:mt-0 w-full md:w-auto">
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search publishers..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter} className="w-full md:w-40">
+            <SelectTrigger>
+              <div className="flex items-center">
+                <Filter className="mr-2 h-4 w-4" />
+                <span>
+                  {statusFilter === "all"
+                    ? "All Status"
+                    : statusFilter === "approved"
+                      ? "Approved"
+                      : statusFilter === "pending"
+                        ? "Pending"
+                        : "Flagged"}
+                </span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="flagged">Flagged</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="bg-card rounded-lg shadow-md overflow-hidden border border-border">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead>Username</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {filteredPublishers.length > 0 ? (
+              filteredPublishers.map((publisher) => (
+                <TableRow key={publisher.publisher_id} className="hover:bg-muted/50">
+                  <TableCell className="font-medium">{publisher.username}</TableCell>
+                  <TableCell>{publisher.email}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant={publisher.is_approved === 1 ? "success" : "warning"} className="capitalize">
+                        {publisher.is_approved === 1 ? "Approved" : "Pending"}
+                      </Badge>
+                      {publisher.is_flagged === 1 && (
+                        <Badge variant="destructive" className="ml-2">
+                          Flagged
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleViewBooks(publisher)}>
+                          <BookOpen className="mr-2 h-4 w-4" />
+                          View Books
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {publisher.is_approved === 0 && (
+                          <>
+                            <DropdownMenuItem onClick={() => handleApprove(publisher)}>
+                              <Check className="mr-2 h-4 w-4 text-green-600" />
+                              Approve
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleReject(publisher)}>
+                              <X className="mr-2 h-4 w-4 text-red-600" />
+                              Reject
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        {publisher.is_flagged === 0 ? (
+                          <DropdownMenuItem onClick={() => handleFlag(publisher)}>
+                            <Flag className="mr-2 h-4 w-4 text-amber-600" />
+                            Flag
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => handleUnflag(publisher)}>
+                            <Flag className="mr-2 h-4 w-4 text-green-600" />
+                            Unflag
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  No publishers found matching your filters
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <Dialog open={isViewBooksOpen} onOpenChange={setIsViewBooksOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Books Published by {selectedPublisher?.username}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p>No books published yet.</p>
+            {loadingBooks ? (
+              <div className="flex justify-center items-center h-20">
+                <Loader className="h-6 w-6 animate-spin text-primary" />
+                <span className="ml-2">Loading books...</span>
+              </div>
+            ) : publisherBooks.length > 0 ? (
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Views</TableHead>
+                    <TableHead>Published</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {publisherBooks.map((book) => (
+                    <TableRow key={book.book_id} className="hover:bg-muted/50">
+                      <TableCell className="font-medium">{book.title}</TableCell>
+                      <TableCell>
+                        <Badge variant={book.is_approved ? "success" : "warning"}>
+                          {book.is_approved ? "Approved" : "Pending"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{book.views || 0}</TableCell>
+                      <TableCell>{new Date(book.uploaded_at).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <BookOpen className="h-12 w-12 mb-2 opacity-50" />
+                <p>No books published yet.</p>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -259,7 +442,7 @@ export default function ManagePublishers() {
           <DialogHeader>
             <DialogTitle>Reject Publisher</DialogTitle>
           </DialogHeader>
-          <Input
+          <Textarea
             placeholder="Provide feedback for rejection"
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
@@ -284,7 +467,11 @@ export default function ManagePublishers() {
           <DialogHeader>
             <DialogTitle>Flag Publisher Account</DialogTitle>
           </DialogHeader>
-          <Input placeholder="Reason for flagging" value={flagReason} onChange={(e) => setFlagReason(e.target.value)} />
+          <Textarea
+            placeholder="Reason for flagging"
+            value={flagReason}
+            onChange={(e) => setFlagReason(e.target.value)}
+          />
           <Input
             type="password"
             placeholder="Enter your password to confirm"

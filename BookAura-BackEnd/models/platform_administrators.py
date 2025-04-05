@@ -1,4 +1,10 @@
 import mysql.connector
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
+
+
+db = SQLAlchemy()
+
 
 class PlatformAdministratorsModel:
     def __init__(self):
@@ -38,6 +44,22 @@ class PlatformAdministratorsModel:
         cur.execute('DELETE FROM platform_administrators WHERE admin_id = %s', (admin_id,))
         self.conn.commit()
         cur.close()
+        
+    
+    def get_category_distribution():
+        query = text("""
+            SELECT c.category_name AS category, COUNT(b.book_id) AS book_count
+            FROM categories c
+            LEFT JOIN book_category bc ON c.category_id = bc.category_id
+            LEFT JOIN books b ON bc.book_id = b.book_id
+            GROUP BY c.category_name
+        """)
+        with db.engine.connect() as conn:
+            result = conn.execute(query)
+            return [
+                {"category": row["category"], "book_count": row["book_count"]}
+                for row in result
+            ]
 
     def close_connection(self):
         self.conn.close()

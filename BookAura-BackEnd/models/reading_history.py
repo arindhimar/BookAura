@@ -11,6 +11,22 @@ class ReadingHistoryModel:
             user="root",
             password="root"
         )
+    
+    def execute_query(self, query, params=None):
+        """Execute a query and return the results"""
+        try:
+            cursor = self.conn.cursor()
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            
+            result = cursor.fetchall()
+            cursor.close()
+            return result
+        except Exception as e:
+            print(f"Error executing query: {e}")
+            return None
         
     def fetch_all_reading_history(self):
         cur = self.conn.cursor()
@@ -118,5 +134,65 @@ class ReadingHistoryModel:
         self.conn.commit()
         cur.close()
     
+    def count_active_readers(self, days=30):
+        """Count the number of active readers in the last X days"""
+        try:
+            query = f"""
+                SELECT COUNT(DISTINCT user_id) 
+                FROM reading_history 
+                WHERE last_read_at >= DATE_SUB(NOW(), INTERVAL {days} DAY)
+            """
+            
+            result = self.execute_query(query)
+            return result[0][0] if result else 0
+        except Exception as e:
+            print(f"Error in count_active_readers: {e}")
+            return 0
+    
+    def count_readers_by_publisher(self, publisher_id):
+        """Count the number of unique readers who have read books by a specific publisher"""
+        try:
+            query = """
+                SELECT COUNT(DISTINCT rh.user_id) 
+                FROM reading_history rh
+                JOIN books b ON rh.book_id = b.book_id
+                WHERE b.user_id = %s
+            """
+            
+            cursor = self.conn.cursor()
+            cursor.execute(query, (publisher_id,))
+            result = cursor.fetchone()
+            cursor.close()
+            
+            return result[0] if result else 0
+        except Exception as e:
+            print(f"Error in count_readers_by_publisher: {e}")
+            return 0
+    
+    def get_recent_readers(self, publisher_id, limit=5):
+        """Get the most recent readers of a publisher's books"""
+        try:
+            query = """
+                SELECT u.username, b.title, rh.last_read_at
+                FROM reading_history rh
+                JOIN books b ON rh.book_id = b.book_id
+                JOIN users u ON rh.user_id = u.user_id
+                WHERE b.user_id = %s
+                ORDER BY rh.last_read_at DESC
+                LIMIT %s
+            """
+            
+            cursor = self.conn.cursor()
+            cursor.execute(query, (publisher_id, limit))
+            results = cursor.fetchall()
+            cursor.close()
+            
+            return [{"reader": reader, "book": book, "date": date} for reader, book, date in results]
+        except Exception as e:
+            print(f"Error in get_recent_readers: {e}")
+            return []
+    
     def close_connection(self):
         self.conn.close()
+        return True
+

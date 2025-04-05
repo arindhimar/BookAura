@@ -1,8 +1,9 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
-import { Button } from "../../components/ui/button"
-import { BookOpen, AlertTriangle, CheckCircle, XCircle } from "lucide-react"
-import { Link } from "react-router-dom"
+import { AlertTriangle, CheckCircle, XCircle, Loader } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 export default function ModeratorDashboard() {
   const [stats, setStats] = useState({
@@ -11,6 +12,9 @@ export default function ModeratorDashboard() {
     approvedBooks: 0,
     rejectedBooks: 0,
   })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     fetchDashboardStats()
@@ -19,19 +23,43 @@ export default function ModeratorDashboard() {
   const fetchDashboardStats = async () => {
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/moderator/dashboard-stats`, {
+      if (!token) {
+        navigate("/")
+        return
+      }
+
+      setLoading(true)
+      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/moderators/dashboard-stats`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: token,
         },
       })
+
       if (!response.ok) {
         throw new Error("Failed to fetch dashboard stats")
       }
+
       const data = await response.json()
       setStats(data)
+      setLoading(false)
     } catch (error) {
       console.error("Error fetching dashboard stats:", error)
+      setError(error.message)
+      setLoading(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading dashboard data...</span>
+      </div>
+    )
+  }
+
+  if (error) {
+    return <div className="text-red-500 p-4">Error: {error}</div>
   }
 
   return (
@@ -59,7 +87,7 @@ export default function ModeratorDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Approved Books</CardTitle>
-            <BookOpen className="h-4 w-4 text-blue-500" />
+            <CheckCircle className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.approvedBooks}</div>
@@ -75,14 +103,6 @@ export default function ModeratorDashboard() {
           </CardContent>
         </Card>
       </div>
-      {/* <div className="flex flex-col md:flex-row gap-4">
-        <Button asChild className="flex-1">
-          <Link to="/moderator/content-moderation">View Content Moderation Challenges</Link>
-        </Button>
-        <Button asChild variant="outline" className="flex-1">
-          <Link to="/moderator/settings">Moderator Settings</Link>
-        </Button>
-      </div> */}
     </div>
   )
 }
