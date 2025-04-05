@@ -2,21 +2,34 @@
 
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { motion } from "framer-motion"
-import Navbar from "../../components/UserNavbar"
+import { motion, AnimatePresence } from "framer-motion"
+import UserNavbar from "../../components/UserNavbar"
 import RecentlyRead from "../../components/RecentlyRead"
 import Recommendations from "../../components/Recommendations"
 import ExploreBooks from "../../components/ExploreBooks"
-import { Loader2 } from "lucide-react"
+import CategorySection from "../../components/CategorySection"
+import ReadingProgressSection from "../../components/ReadingProgressSection"
+import { Loader2, BookOpen, RefreshCw, BookText, TrendingUp, History } from "lucide-react"
+import { Button } from "../../components/ui/button"
+import { Card, CardContent } from "../../components/ui/card"
+import { useToast } from "../../hooks/use-toast"
+import { readingHistoryApi, booksApi, categoriesApi, authApi } from "../../services/api"
+import { handleApiError } from "../../utils/errorHandler"
 
 export default function Home() {
   const [userName, setUserName] = useState("User")
   const [recentBooks, setRecentBooks] = useState([])
   const [recommendedBooks, setRecommendedBooks] = useState([])
+  const [categories, setCategories] = useState({})
+  const [inProgressBook, setInProgressBook] = useState(null)
+  const [loadingUser, setLoadingUser] = useState(true)
   const [loadingRecent, setLoadingRecent] = useState(true)
   const [loadingRecommendations, setLoadingRecommendations] = useState(true)
+  const [loadingCategories, setLoadingCategories] = useState(true)
+  const [loadingProgress, setLoadingProgress] = useState(true)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
+  const { toast } = useToast()
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -27,19 +40,14 @@ export default function Home() {
 
     const fetchUserData = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/auth/me`, {
-          headers: { Authorization: token },
-        })
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch user data")
-        }
-
-        const data = await response.json()
+        setLoadingUser(true)
+        const data = await authApi.getCurrentUser()
         setUserName(data.user.username || "User")
       } catch (error) {
         console.error("Error fetching user data:", error)
-        setError("Failed to load user data. Please try again.")
+        handleApiError(error, toast, "Failed to load user data")
+      } finally {
+        setLoadingUser(false)
       }
     }
 
@@ -47,19 +55,29 @@ export default function Home() {
     const fetchRecentlyRead = async () => {
       try {
         setLoadingRecent(true)
-        const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/reading_history/user`, {
-          headers: { Authorization: token },
-        })
+        const historyData = await readingHistoryApi.getUserHistory()
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch recently read books")
-        }
+        // Format history data
+        const formattedHistory = historyData.map((item) => ({
+          ...item.book_details,
+          book_id: item.book_id,
+          history_id: item.history_id,
+          last_read_at: item.last_read_at,
+          progress: item.progress || 0,
+          categories: Array.isArray(item.book_details.categories)
+            ? item.book_details.categories
+            : typeof item.book_details.categories === "string"
+              ? item.book_details.categories.split(",").map((c) => c.trim())
+              : [],
+        }))
 
-        const data = await response.json()
-        setRecentBooks(data)
+        // Sort by last read date
+        formattedHistory.sort((a, b) => new Date(b.last_read_at) - new Date(a.last_read_at))
+
+        setRecentBooks(formattedHistory)
       } catch (error) {
         console.error("Error fetching recently read books:", error)
-        setError("Failed to load reading history. Please try again.")
+        handleApiError(error, toast, "Failed to load reading history")
       } finally {
         setLoadingRecent(false)
       }
@@ -69,77 +87,207 @@ export default function Home() {
     const fetchRecommendations = async () => {
       try {
         setLoadingRecommendations(true)
-        const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/`, {
-          headers: { Authorization: token },
-        })
+        const books = await booksApi.getBooks()
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch recommendations")
-        }
+        // Sort by views or other criteria for recommendations
+        const sortedBooks = books.sort((a, b) => (b.views || 0) - (a.views || 0))
 
-        const data = await response.json()
-        setRecommendedBooks(data)
+        setRecommendedBooks(sortedBooks)
       } catch (error) {
         console.error("Error fetching recommendations:", error)
-        setError("Failed to load recommendations. Please try again.")
+        handleApiError(error, toast, "Failed to load recommendations")
       } finally {
         setLoadingRecommendations(false)
       }
     }
 
-    fetchUserData()
-    fetchRecentlyRead()
-    fetchRecommendations()
-  }, [navigate])
+    // Fetch categories with books
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true)
+        const categorizedBooks = await categoriesApi.getCategorizedBooks()
+        setCategories(categorizedBooks)
+      } catch (error) {
+        console.error("Error fetching categories:", error)
+        handleApiError(error, toast, "Failed to load categories")
+      } finally {
+        setLoadingCategories(false)
+      }
+    }
+
+    // Fetch in-progress book
+    const fetchInProgressBook = async () => {
+      try {
+        setLoadingProgress(true)
+        // Get the most recently read book with progress < 100%
+        const historyData = await readingHistoryApi.getUserHistory()
+
+        if (historyData && historyData.length > 0) {
+          // Sort by last read date
+          historyData.sort((a, b) => new Date(b.last_read_at) - new Date(a.last_read_at))
+
+          // Find the first book with progress < 100%
+          const inProgress = historyData.find((item) => (item.progress || 0) < 100)
+
+          if (inProgress) {
+            setInProgressBook({
+              ...inProgress.book_details,
+              book_id: inProgress.book_id,
+              progress: inProgress.progress || 0,
+              last_read_at: inProgress.last_read_at,
+            })
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching in-progress book:", error)
+        // Don't show toast for this as it's not critical
+      } finally {
+        setLoadingProgress(false)
+      }
+    }
+
+    // Fetch all data in parallel
+    Promise.all([
+      fetchUserData(),
+      fetchRecentlyRead(),
+      fetchRecommendations(),
+      fetchCategories(),
+      fetchInProgressBook(),
+    ]).catch((error) => {
+      console.error("Error fetching data:", error)
+      setError("Failed to load data. Please try again.")
+    })
+  }, [navigate, toast])
+
+  const isLoading = loadingUser && loadingRecent && loadingRecommendations && loadingCategories && loadingProgress
 
   if (error) {
     return (
-      <main className="min-h-screen flex flex-col">
-        <Navbar />
+      <main className="min-h-screen flex flex-col bg-background">
+        <UserNavbar />
         <div className="flex-grow container mx-auto px-4 py-8 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-red-500 mb-4">{error}</p>
-            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-primary text-white rounded-md">
-              Retry
-            </button>
-          </div>
+          <Card className="w-full max-w-md">
+            <CardContent className="p-6 text-center">
+              <BookOpen className="h-12 w-12 mx-auto text-red-500 mb-4" />
+              <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
+              <p className="text-muted-foreground mb-6">{error}</p>
+              <Button onClick={() => window.location.reload()} className="flex items-center">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </main>
     )
   }
 
-  if (loadingRecent && loadingRecommendations) {
+  if (isLoading) {
     return (
-      <main className="min-h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-grow container mx-auto px-4 py-8 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <main className="min-h-screen flex flex-col bg-background">
+        <UserNavbar />
+        <div className="flex-grow container mx-auto px-4 py-8 flex flex-col items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+          <p className="text-muted-foreground">Loading your personalized experience...</p>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen flex flex-col">
-      <Navbar />
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex-grow container mx-auto px-4 py-8"
-      >
-        <motion.h1
-          className="text-4xl font-bold mb-8 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
-          Welcome back to BookAura, {userName}!
-        </motion.h1>
-        <ExploreBooks />
-        <RecentlyRead books={recentBooks} loading={loadingRecent} />
-        <Recommendations books={recommendedBooks} loading={loadingRecommendations} />
-      </motion.div>
+    <main className="min-h-screen flex flex-col bg-background">
+      <UserNavbar />
+      <div className="flex-grow container mx-auto px-4 py-8">
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-10"
+          >
+            {/* Welcome Section */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="text-center md:text-left"
+            >
+              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                Welcome back, {userName}!
+              </h1>
+              <p className="text-lg text-muted-foreground">Continue your reading journey with BookAura</p>
+            </motion.div>
+
+            {/* Reading Progress Section */}
+            {inProgressBook && <ReadingProgressSection book={inProgressBook} loading={loadingProgress} />}
+
+            {/* Quick Actions */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+            >
+              <Card
+                className="hover:shadow-md transition-shadow duration-300 cursor-pointer"
+                onClick={() => navigate("/browse")}
+              >
+                <CardContent className="p-6 flex items-center">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mr-4">
+                    <BookText className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Browse Books</h3>
+                    <p className="text-sm text-muted-foreground">Discover new titles</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card
+                className="hover:shadow-md transition-shadow duration-300 cursor-pointer"
+                onClick={() => navigate("/categories")}
+              >
+                <CardContent className="p-6 flex items-center">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mr-4">
+                    <TrendingUp className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Categories</h3>
+                    <p className="text-sm text-muted-foreground">Browse by genre</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card
+                className="hover:shadow-md transition-shadow duration-300 cursor-pointer"
+                onClick={() => navigate("/library")}
+              >
+                <CardContent className="p-6 flex items-center">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mr-4">
+                    <History className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">My Library</h3>
+                    <p className="text-sm text-muted-foreground">Your reading history</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Explore Books Section */}
+            <ExploreBooks categories={categories} loading={loadingCategories} />
+
+            {/* Recently Read Section */}
+            <RecentlyRead books={recentBooks} loading={loadingRecent} />
+
+            {/* Recommendations Section */}
+            <Recommendations books={recommendedBooks} loading={loadingRecommendations} />
+
+            {/* Categories Section */}
+            <CategorySection categories={categories} loading={loadingCategories} />
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </main>
   )
 }

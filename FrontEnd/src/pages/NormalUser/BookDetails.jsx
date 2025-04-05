@@ -3,11 +3,12 @@
 import { useParams, useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Button } from "../../components/ui/button"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, Loader2, BookOpen, RefreshCw } from "lucide-react"
 import BookDetailsComponent from "../../components/BookDetailsComponent"
 import RelatedBooks from "../../components/RelatedBooks"
 import { useEffect, useState } from "react"
-import Navbar from "../../components/UserNavbar"
+import UserNavbar from "../../components/UserNavbar"
+import { Card, CardContent } from "../../components/ui/card"
 
 export default function BookDetails() {
   const { id } = useParams()
@@ -28,6 +29,8 @@ export default function BookDetails() {
     const fetchCurrentBook = async () => {
       try {
         setLoading(true)
+        setError(null)
+
         const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/full/${id}`, {
           headers: { Authorization: token },
           method: "GET",
@@ -42,8 +45,8 @@ export default function BookDetails() {
 
         const data = await response.json()
         setBook(data.book)
-        setRelatedByAuthor(data.related_books_by_author || [])
-        setRelatedByCategory(data.related_books_by_category || [])
+        setRelatedByAuthor(data.related_by_author || [])
+        setRelatedByCategory(data.related_by_category || [])
       } catch (error) {
         console.error(error)
         setError(error.message || "An error occurred while loading the book")
@@ -57,10 +60,13 @@ export default function BookDetails() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex flex-col">
-        <Navbar />
+      <main className="min-h-screen flex flex-col bg-background">
+        <UserNavbar />
         <div className="flex-grow flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 mx-auto animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading book details...</p>
+          </div>
         </div>
       </main>
     )
@@ -68,31 +74,42 @@ export default function BookDetails() {
 
   if (error) {
     return (
-      <main className="min-h-screen flex flex-col">
-        <Navbar />
+      <main className="min-h-screen flex flex-col bg-background">
+        <UserNavbar />
         <div className="flex-grow container mx-auto px-4 py-8">
           <Button
             onClick={() => navigate(-1)}
             variant="ghost"
-            className="mb-4 hover:bg-primary/10 transition-colors duration-300"
+            className="mb-8 hover:bg-primary/10 transition-colors duration-300"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
 
-          <div className="flex flex-col items-center justify-center py-12">
-            <h2 className="text-2xl font-bold text-red-500 mb-4">{error}</h2>
-            <p className="text-muted-foreground mb-6">The book you're looking for could not be loaded.</p>
-            <Button onClick={() => navigate("/home")}>Return to Home</Button>
-          </div>
+          <Card className="w-full max-w-md mx-auto">
+            <CardContent className="p-6 text-center">
+              <BookOpen className="h-12 w-12 mx-auto text-red-500 mb-4" />
+              <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
+              <p className="text-muted-foreground mb-6">{error}</p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button onClick={() => navigate("/home")} variant="outline">
+                  Return to Home
+                </Button>
+                <Button onClick={() => window.location.reload()} className="flex items-center">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Try Again
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen flex flex-col">
-      <Navbar />
+    <main className="min-h-screen flex flex-col bg-background">
+      <UserNavbar />
 
       <motion.div
         initial={{ opacity: 0 }}
@@ -104,7 +121,7 @@ export default function BookDetails() {
         <Button
           onClick={() => navigate(-1)}
           variant="ghost"
-          className="mb-4 hover:bg-primary/10 transition-colors duration-300"
+          className="mb-8 hover:bg-primary/10 transition-colors duration-300"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
@@ -113,7 +130,7 @@ export default function BookDetails() {
         {/* Book Details */}
         <BookDetailsComponent book={book} />
 
-        {/* Pass related books to RelatedBooks component */}
+        {/* Related Books */}
         <RelatedBooks relatedByAuthor={relatedByAuthor} relatedByCategory={relatedByCategory} />
       </motion.div>
     </main>

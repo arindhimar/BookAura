@@ -321,65 +321,15 @@ class BooksModel:
     # Book Fetching Methods
     # --------------------------
 
-    def fetch_all_books(self, include_unapproved: bool = False) -> List[Dict]:
-        conn = BooksModel._connection_pool.get_connection()
-        try:
-            with conn.cursor(dictionary=True, buffered=True) as cur:
-                query = """
-                    SELECT 
-                        b.book_id, 
-                        b.user_id AS author_id, 
-                        u.username AS author_name, 
-                        b.title, 
-                        b.description, 
-                        b.fileUrl, 
-                        b.audioUrl,
-                        b.is_public, 
-                        b.is_approved, 
-                        b.uploaded_at, 
-                        b.uploaded_by_role,
-                        b.coverUrl,
-                        COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
-                        COALESCE(SUM(v.book_view), 0) AS views
-                    FROM 
-                        books b
-                    LEFT JOIN 
-                        book_category bc ON b.book_id = bc.book_id
-                    LEFT JOIN 
-                        categories c ON bc.category_id = c.category_id
-                    LEFT JOIN 
-                        users u ON b.user_id = u.user_id
-                    LEFT JOIN 
-                        views v ON b.book_id = v.book_id
-                """
-                if not include_unapproved:
-                    query += " WHERE b.is_approved = 1"
-                query += " GROUP BY b.book_id"
-                cur.execute(query)
-                books = cur.fetchall()
-                for book in books:
-                    if 'uploaded_at' in book and book['uploaded_at']:
-                        book['uploaded_at'] = book['uploaded_at'].isoformat()
-                return books
-        except Exception as e:
-            logger.error(f"Failed to fetch all books: {e}")
-            return []
-        finally:
-            conn.close()
-
-    def fetch_book_by_id(self, book_id: int) -> Optional[Dict]:
+    def get_all_books(self):
         """
-        Fetch a single book by its ID with complete details.
-        
-        Args:
-            book_id: ID of the book to fetch
-            
-        Returns:
-            Dictionary with complete book information, or None if not found
+        Fetch all books from the database with proper aggregation
         """
-        conn = self.get_connection()
         try:
-            with conn.cursor(dictionary=True) as cur:
+            if not self.conn or not self.conn.is_connected():
+                self.conn = self.get_connection()
+                
+            with self.conn.cursor(dictionary=True) as cur:
                 cur.execute("""
                     SELECT 
                         b.book_id, 
@@ -395,7 +345,7 @@ class BooksModel:
                         b.uploaded_by_role,
                         b.coverUrl,
                         COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
-                        COALESCE(SUM(v.book_view), 0) AS views
+                        COALESCE(SUM(v.book_view), 0) AS views  -- Changed to SUM aggregation
                     FROM 
                         books b
                     LEFT JOIN 
@@ -406,27 +356,57 @@ class BooksModel:
                         users u ON b.user_id = u.user_id
                     LEFT JOIN 
                         views v ON b.book_id = v.book_id
-                    WHERE 
-                        b.book_id = %s
                     GROUP BY 
-                        b.book_id
-                """, (book_id,))
+                        b.book_id  -- Simplified GROUP BY
+                """)
+                books = cur.fetchall()
                 
-                book = cur.fetchone()
-                
-                if book:
-                    if 'uploaded_at' in book and book['uploaded_at']:
+                # Convert datetime objects to strings
+                for book in books:
+                    if book.get('uploaded_at'):
                         book['uploaded_at'] = book['uploaded_at'].isoformat()
                 
-                return book
-
+                return books
         except Exception as e:
-            logger.error(f"Failed to fetch book {book_id}: {e}")
-            return None
-        finally:
-            if 'cur' in locals():
-                cur.close()
-
+            logger.error(f"Failed to fetch all books: {e}")
+            return []
+        
+    def get_book_by_id(self, book_id):
+        with self.conn.cursor(dictionary=True) as cur:
+            cur.execute("""
+                SELECT 
+                    b.book_id, 
+                    ANY_VALUE(b.user_id) AS author_id, 
+                    ANY_VALUE(u.username) AS author_name, 
+                    ANY_VALUE(b.title) AS title, 
+                    ANY_VALUE(b.description) AS description, 
+                    ANY_VALUE(b.fileUrl) AS fileUrl, 
+                    ANY_VALUE(b.audioUrl) AS audioUrl,
+                    ANY_VALUE(b.is_public) AS is_public, 
+                    ANY_VALUE(b.is_approved) AS is_approved, 
+                    ANY_VALUE(b.uploaded_at) AS uploaded_at, 
+                    ANY_VALUE(b.uploaded_by_role) AS uploaded_by_role,
+                    ANY_VALUE(b.coverUrl) AS coverUrl,
+                    COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
+                    COALESCE(SUM(v.book_view), 0) AS views  -- Aggregate views with SUM()
+                FROM 
+                    books b
+                LEFT JOIN 
+                    book_category bc ON b.book_id = bc.book_id
+                LEFT JOIN 
+                    categories c ON bc.category_id = c.category_id
+                LEFT JOIN 
+                    users u ON b.user_id = u.user_id
+                LEFT JOIN 
+                    views v ON b.book_id = v.book_id
+                WHERE 
+                    b.book_id = %s
+                GROUP BY 
+                    b.book_id  
+            """, (book_id,))
+            
+            book = cur.fetchone()
+            return book    
     def fetch_public_books(self, limit: int = None, offset: int = None) -> List[Dict]:
         """
         Fetch all public books with pagination support.
@@ -709,24 +689,13 @@ class BooksModel:
 
     def fetch_complete_book(self, book_id: int) -> Optional[Dict]:
         """
-        Fetch a book with all related information including:
-        - Book details
-        - Related books by category
-        - Related books by author
-        - Reading statistics
-        
-        Args:
-            book_id: ID of the book to fetch
-            
-        Returns:
-            Dictionary containing all book information and related data,
-            or None if book not found
+        Fetch a book with all related information excluding progress
         """
         conn = self.get_connection()
         try:
             with conn.cursor(dictionary=True) as cur:
                 # Fetch main book details
-                book = self.fetch_book_by_id(book_id)
+                book = self.get_book_by_id(book_id)
                 if not book:
                     return None
                 
@@ -747,7 +716,7 @@ class BooksModel:
                         SELECT DISTINCT 
                             b.book_id, b.title, b.coverUrl, 
                             u.username AS author_name,
-                            COALESCE(v.book_view, 0) AS views
+                            COALESCE(SUM(v.book_view), 0) AS views
                         FROM books b
                         JOIN book_category bc ON b.book_id = bc.book_id
                         JOIN categories c ON bc.category_id = c.category_id
@@ -769,7 +738,7 @@ class BooksModel:
                     SELECT 
                         b.book_id, b.title, b.coverUrl,
                         u.username AS author_name,
-                        COALESCE(v.book_view, 0) AS views
+                        COALESCE(SUM(v.book_view), 0) AS views
                     FROM books b
                     LEFT JOIN users u ON b.user_id = u.user_id
                     LEFT JOIN views v ON b.book_id = v.book_id
@@ -782,15 +751,14 @@ class BooksModel:
                 """, (book['author_id'], book_id))
                 related_by_author = cur.fetchall()
                 
-                # Fetch reading statistics
+                # Fetch reading statistics (without progress)
                 cur.execute("""
                     SELECT 
-                        COUNT(DISTINCT user_id) AS total_readers,
-                        AVG(progress) AS average_progress
+                        COUNT(DISTINCT user_id) AS total_readers
                     FROM reading_history
                     WHERE book_id = %s
                 """, (book_id,))
-                stats = cur.fetchone() or {'total_readers': 0, 'average_progress': 0}
+                stats = cur.fetchone() or {'total_readers': 0}
                 
                 return {
                     'book': book,
@@ -805,7 +773,6 @@ class BooksModel:
         finally:
             if 'cur' in locals():
                 cur.close()
-
     # --------------------------
     # Approval Methods
     # --------------------------
@@ -1336,3 +1303,72 @@ class BooksModel:
         except Exception as e:
             logger.error(f"Unexpected error in get_books_by_category: {e}")
             return []
+    def count_books_by_publisher(self, user_id):
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            SELECT COUNT(*) FROM books WHERE uid = ?
+        ''', (user_id,))
+        result = cursor.fetchone()
+        return result[0] if result else 0
+    
+    def fetch_books_by_publisher(self, publisher_id):
+        """
+        Fetch all books published by a specific publisher.
+        
+        Args:
+            publisher_id: ID of the publisher (user_id)
+            
+        Returns:
+            List of books published by the specified publisher
+        """
+        try:
+            if not self.conn or not self.conn.is_connected():
+                self.conn = self.get_connection()
+                
+            with self.conn.cursor(dictionary=True) as cur:
+                cur.execute("""
+                    SELECT 
+                        b.book_id, 
+                        b.user_id AS author_id, 
+                        u.username AS author_name, 
+                        b.title, 
+                        b.description, 
+                        b.fileUrl, 
+                        b.audioUrl,
+                        b.is_public, 
+                        b.is_approved, 
+                        b.uploaded_at, 
+                        b.uploaded_by_role,
+                        b.coverUrl,
+                        COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
+                        COALESCE(MAX(v.book_view), 0) AS views
+                    FROM 
+                        books b
+                    LEFT JOIN 
+                        book_category bc ON b.book_id = bc.book_id
+                    LEFT JOIN 
+                        categories c ON bc.category_id = c.category_id
+                    LEFT JOIN 
+                        users u ON b.user_id = u.user_id
+                    LEFT JOIN 
+                        views v ON b.book_id = v.book_id
+                    WHERE 
+                        b.user_id = %s
+                    GROUP BY 
+                        b.book_id, b.user_id, u.username, b.title, b.description, 
+                        b.fileUrl, b.audioUrl, b.is_public, b.is_approved, 
+                        b.uploaded_at, b.uploaded_by_role, b.coverUrl
+                """, (publisher_id,))
+                
+                books = cur.fetchall()
+                
+                # Convert datetime objects to strings for JSON serialization
+                for book in books:
+                    if 'uploaded_at' in book and book['uploaded_at']:
+                        book['uploaded_at'] = book['uploaded_at'].isoformat()
+                
+                return books
+        except Exception as e:
+            logger.error(f"Failed to fetch books for publisher {publisher_id}: {e}")
+            return []
+

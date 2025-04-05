@@ -3,44 +3,59 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "./ui/card"
 import { Button } from "./ui/button"
-import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Eye, MoreVertical, Bookmark, BookmarkCheck, Share, Heart, Star } from "lucide-react"
+import { Eye, MoreVertical, Bookmark, BookmarkCheck, Share, Star, Trash2, Calendar } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import { Badge } from "./ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
+import { Progress } from "./ui/progress"
+import { useToast } from "../hooks/use-toast"
 
-// Reusable BookCard component that can be used across the application
-export default function BookCard({ book, index = 0, showButton = false, onClick, className = "" }) {
+export default function BookCard({
+  book,
+  index = 0,
+  showButton = false,
+  onClick,
+  onRemove,
+  showProgress = false,
+  className = "",
+}) {
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  const navigate = useNavigate()
+  const { toast } = useToast()
 
   // Handle different book data structures
   const bookId = book.book_id
-  const title = book.title || (book.book_details && book.book_details.title)
+  const title = book.title || (book.book_details && book.book_details.title) || "Untitled Book"
   const authorName = book.author_name || (book.book_details && book.book_details.author_name) || "Unknown Author"
-  const cover = book.cover || (book.book_details && book.book_details.cover)
-  const coverUrl = book.cover_url || (book.book_details && book.book_details.cover_url)
+  const coverUrl = book.coverUrl || book.cover_url || (book.book_details && book.book_details.cover_url)
   const views = book.views || (book.book_details && book.book_details.views) || 0
-  const progress = book.progress || (book.book_details && book.book_details.progress)
+  const progress = book.progress || (book.book_details && book.book_details.progress) || 0
   const lastRead = book.last_read_at || book.lastRead || (book.book_details && book.book_details.last_read_at)
-  const categories = book.categories ? book.categories.split(",").map((c) => c.trim()) : []
+  const categories = book.categories
+    ? typeof book.categories === "string"
+      ? book.categories.split(",").map((c) => c.trim())
+      : book.categories
+    : []
   const rating = book.rating || (book.book_details && book.book_details.rating) || 4.5
+  const createdAt = book.created_at || book.createdAt
 
   useEffect(() => {
     const checkBookmarkStatus = async () => {
       if (!bookId) return
 
       try {
+        const token = localStorage.getItem("token")
+        if (!token) return
+
         const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${bookId}/user`, {
-          headers: { Authorization: `${localStorage.getItem("token")}` },
+          headers: { Authorization: token },
           method: "GET",
         })
 
         if (response.ok) {
           const data = await response.json()
-          setIsBookmarked(data.is_bookmarked)
+          setIsBookmarked(data.is_bookmarked === true || data.is_bookmarked === "true")
         }
       } catch (error) {
         console.error("Error checking bookmark status:", error)
@@ -55,19 +70,35 @@ export default function BookCard({ book, index = 0, showButton = false, onClick,
     e.stopPropagation()
 
     try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
       const method = isBookmarked ? "DELETE" : "POST"
       const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/bookmarks/book/${bookId}/user`, {
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `${localStorage.getItem("token")}`,
+          Authorization: token,
         },
       })
 
       if (!response.ok) throw new Error("Bookmark update failed")
+
       setIsBookmarked(!isBookmarked)
+
+      toast({
+        title: isBookmarked ? "Bookmark removed" : "Book bookmarked",
+        description: isBookmarked
+          ? "The book has been removed from your bookmarks"
+          : "The book has been added to your bookmarks",
+      })
     } catch (error) {
       console.error("Error updating bookmark:", error)
+      toast({
+        title: "Action failed",
+        description: "There was a problem updating your bookmark",
+        variant: "destructive",
+      })
     }
   }
 
@@ -76,16 +107,54 @@ export default function BookCard({ book, index = 0, showButton = false, onClick,
     e.stopPropagation()
 
     const url = `${window.location.origin}/book/${bookId}`
-    navigator.clipboard.writeText(url)
-    alert("Link copied to clipboard!")
+
+    if (navigator.share) {
+      navigator
+        .share({
+          title: title,
+          text: `Check out this book: ${title} by ${authorName}`,
+          url: url,
+        })
+        .catch((err) => {
+          console.error("Error sharing:", err)
+          navigator.clipboard.writeText(url)
+          toast({
+            title: "Link copied",
+            description: "Book link copied to clipboard",
+          })
+        })
+    } else {
+      navigator.clipboard.writeText(url)
+      toast({
+        title: "Link copied",
+        description: "Book link copied to clipboard",
+      })
+    }
   }
 
   const handleCardClick = () => {
     if (onClick) {
       onClick(book)
-    } else {
-      navigate(`/book/${bookId}`)
     }
+  }
+
+  const handleRemove = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (onRemove) {
+      onRemove(bookId)
+    }
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return ""
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
   }
 
   return (
@@ -131,10 +200,12 @@ export default function BookCard({ book, index = 0, showButton = false, onClick,
                 <Share className="h-4 w-4 mr-2" />
                 <span>Share</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Heart className="h-4 w-4 mr-2" />
-                <span>Add to Favorites</span>
-              </DropdownMenuItem>
+              {onRemove && (
+                <DropdownMenuItem onClick={handleRemove} className="text-red-500">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  <span>Remove</span>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -142,10 +213,8 @@ export default function BookCard({ book, index = 0, showButton = false, onClick,
         <div className="relative aspect-[2/3] overflow-hidden">
           <img
             src={
-              (coverUrl ? "http://127.0.0.1:5000/books/" + coverUrl : null) ||
-              cover ||
-              "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg" ||
-              "/placeholder.svg"
+              (coverUrl ? `${import.meta.env.VITE_BASE_API_URL}/books/${coverUrl}` : null) ||
+              "/placeholder.svg?height=300&width=200"
             }
             alt={title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
@@ -201,27 +270,9 @@ export default function BookCard({ book, index = 0, showButton = false, onClick,
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 rounded-full bg-white/80 text-gray-800 hover:bg-white"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Heart className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Add to Favorites</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
 
-          {progress && (
+          {showProgress && progress > 0 && (
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200">
               <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
             </div>
@@ -254,17 +305,25 @@ export default function BookCard({ book, index = 0, showButton = false, onClick,
             </div>
           )}
 
-          <div className="flex items-center text-muted-foreground">
-            <Eye className="h-3 w-3 mr-1" />
-            <span className="text-xs">{views} views</span>
+          <div className="flex items-center justify-between text-muted-foreground">
+            <div className="flex items-center">
+              <Eye className="h-3 w-3 mr-1" />
+              <span className="text-xs">{views} views</span>
+            </div>
+            {(lastRead || createdAt) && (
+              <div className="flex items-center text-xs">
+                <Calendar className="h-3 w-3 mr-1" />
+                <span>{formatDate(lastRead || createdAt)}</span>
+              </div>
+            )}
           </div>
 
-          {progress && (
-            <div className="mt-2 flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">{progress}% complete</span>
-              {lastRead && (
-                <span className="text-muted-foreground text-xs">{new Date(lastRead).toLocaleDateString()}</span>
-              )}
+          {showProgress && progress > 0 && (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{progress}% complete</span>
+              </div>
+              <Progress value={progress} className="h-1" />
             </div>
           )}
 

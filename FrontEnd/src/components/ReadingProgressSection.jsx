@@ -1,109 +1,129 @@
 "use client"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+
+import { motion } from "framer-motion"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { BookOpen, Clock } from "lucide-react"
-import { motion } from "framer-motion"
+import { useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { readingHistoryApi } from "../services/api"
 
-const ReadingProgressSection = ({ books }) => {
-  // Default books if not provided
-  const defaultBooks = [
-    {
-      id: "1",
-      title: "The Great Adventure",
-      author: "Jane Doe",
-      coverImage: "/placeholder.svg?height=400&width=300",
-      progress: 65,
-      lastRead: "2023-10-15T14:30:00",
-      timeLeft: "3 hours",
-    },
-    {
-      id: "2",
-      title: "Mystery of the Lost City",
-      author: "John Smith",
-      coverImage: "/placeholder.svg?height=400&width=300",
-      progress: 32,
-      lastRead: "2023-10-14T20:15:00",
-      timeLeft: "5 hours",
-    },
-    {
-      id: "3",
-      title: "The Science of Everything",
-      author: "Alan Johnson",
-      coverImage: "/placeholder.svg?height=400&width=300",
-      progress: 89,
-      lastRead: "2023-10-16T09:45:00",
-      timeLeft: "1 hour",
-    },
-  ]
+export default function ReadingProgressSection({ book: propBook, loading: propLoading }) {
+  const navigate = useNavigate()
+  const [book, setBook] = useState(propBook)
+  const [loading, setLoading] = useState(propLoading || !propBook)
 
-  const booksToDisplay = books || defaultBooks
-
-  // Format the last read date
-  const formatLastRead = (dateString) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffTime = Math.abs(now - date)
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-
-    if (diffDays === 0) {
-      return "Today"
-    } else if (diffDays === 1) {
-      return "Yesterday"
-    } else {
-      return `${diffDays} days ago`
+  useEffect(() => {
+    // If book is provided as prop, use it
+    if (propBook) {
+      // console.log("Using provided book:", propBook)
+      setBook(propBook)
+      setLoading(false)
+      return
     }
+
+    // Otherwise fetch the in-progress book
+    const fetchInProgressBook = async () => {
+      try {
+        setLoading(true)
+        const historyData = await readingHistoryApi.getUserHistory()
+
+        if (historyData && historyData.length > 0) {
+          // Sort by last read date
+          historyData.sort((a, b) => new Date(b.last_read_at) - new Date(a.last_read_at))
+
+          // Find the first book with progress < 100%
+          const inProgress = historyData.find((item) => (item.progress || 0) < 100)
+
+          if (inProgress) {
+            setBook({
+              ...inProgress.book_details,
+              book_id: inProgress.book_id,
+              progress: inProgress.progress || 0,
+              last_read_at: inProgress.last_read_at,
+            })
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching in-progress book:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchInProgressBook()
+  }, [propBook])
+
+  if (loading) {
+    return <div className="w-full h-32 rounded-lg bg-muted animate-pulse"></div>
   }
 
+  if (!book) {
+    return null
+  }
+
+  const formattedDate = book.last_read_at
+    ? new Date(book.last_read_at).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "Recently"
+
   return (
-    <Card className="border border-border/50">
-      <CardHeader>
-        <CardTitle className="text-xl">Continue Reading</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {booksToDisplay.map((book, index) => (
-          <motion.div
-            key={book.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="flex gap-4"
-          >
-            <div className="flex-shrink-0 w-16 h-24 overflow-hidden rounded-md">
-              <img
-                src={book.coverImage || "/placeholder.svg"}
-                alt={book.title}
-                className="object-cover w-full h-full"
-              />
-            </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold">Continue Reading</h2>
+        <Button variant="ghost" onClick={() => navigate("/library")} className="text-primary">
+          View All
+        </Button>
+      </div>
 
-            <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-base line-clamp-1">{book.title}</h3>
-              <p className="text-sm text-muted-foreground line-clamp-1 mb-2">{book.author}</p>
+      <div className="bg-card border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+        <div className="flex flex-col md:flex-row">
+          <div className="w-full md:w-1/4 aspect-[3/4] md:aspect-auto">
+            <img
+              src={
+                book.cover_url
+                  ? `${import.meta.env.VITE_BASE_API_URL}/books/${book.cover_url}`
+                  : "/placeholder.svg?height=300&width=200"
+              }
+              alt={book.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="p-6 flex flex-col justify-between flex-grow">
+            <div>
+              <h3 className="text-xl font-bold mb-2">{book.title}</h3>
+              <p className="text-muted-foreground mb-4">{book.author_name || "Unknown Author"}</p>
 
-              <div className="flex items-center text-xs text-muted-foreground mb-2">
-                <Clock className="h-3 w-3 mr-1" />
-                <span>
-                  Last read {formatLastRead(book.lastRead)} • {book.timeLeft} left
-                </span>
+              <div className="flex items-center text-sm text-muted-foreground mb-6">
+                <Clock className="h-4 w-4 mr-2" />
+                <span>Last read on {formattedDate}</span>
               </div>
 
-              <div className="flex items-center gap-2 mb-2">
-                <Progress value={book.progress} className="h-2 flex-1" />
-                <span className="text-xs font-medium">{book.progress}%</span>
+              <div className="space-y-2 mb-6">
+                <div className="flex justify-between text-sm">
+                  <span className="text-foreground">Progress</span>
+                  <span className="font-medium text-foreground">{book.progress || 0}%</span>
+                </div>
+                <Progress value={book.progress || 0} className="h-2" />
               </div>
-
-              <Button size="sm" variant="ghost" className="text-xs px-2 py-1 h-auto">
-                <BookOpen className="h-3 w-3 mr-1" />
-                Continue
-              </Button>
             </div>
-          </motion.div>
-        ))}
-      </CardContent>
-    </Card>
+
+            <Button onClick={() => navigate(`/book/${book.book_id}`)} className="w-full md:w-auto">
+              <BookOpen className="mr-2 h-4 w-4" />
+              Continue Reading
+            </Button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   )
 }
-
-export default ReadingProgressSection
 

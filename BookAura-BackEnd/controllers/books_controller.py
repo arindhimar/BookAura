@@ -359,7 +359,7 @@ def serve_audio_file(filename):
 @app.route('/', methods=['GET'])
 def get_all_books():
     base_url = request.host_url
-    rows = books_model.fetch_all_books()
+    rows = books_model.get_all_books()
     books = [{
         'book_id': row['book_id'],
         'author_id': row['author_id'],
@@ -380,7 +380,7 @@ def get_all_books():
 
 @app.route('/<int:book_id>', methods=['GET'])
 def get_book(book_id):
-    row = books_model.fetch_book_by_id(book_id)
+    row = books_model.get_book_by_id(book_id)
     if row is None:
         return jsonify({'error': 'Book not found'}), 404
 
@@ -497,7 +497,7 @@ def create_book():
 @app.route('/<int:book_id>', methods=['PUT'])
 def update_book(book_id):
     data = request.get_json()
-    if books_model.fetch_book_by_id(book_id) is None:
+    if books_model.get_book_by_id(book_id) is None:
         return jsonify({'error': 'Book not found'}), 404
     books_model.update_book(
         book_id,
@@ -511,7 +511,7 @@ def update_book(book_id):
 
 @app.route('/<int:book_id>', methods=['DELETE'])
 def delete_book(book_id):
-    if books_model.fetch_book_by_id(book_id) is None:
+    if books_model.get_book_by_id(book_id) is None:
         return jsonify({'error': 'Book not found'}), 404
     books_model.delete_book(book_id)
     return jsonify({'message': 'Book deleted successfully'}), 200

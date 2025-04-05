@@ -1,100 +1,104 @@
-import { motion } from "framer-motion";
-import { Search, TrendingUp, Clock, Star } from "lucide-react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+"use client"
 
-export default function ExploreBooks() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [isFocused, setIsFocused] = useState(false);
-  const navigate = useNavigate();
+import { motion } from "framer-motion"
+import { Button } from "./ui/button"
+import { useNavigate } from "react-router-dom"
+import { ChevronRight } from "lucide-react"
+import { ScrollArea, ScrollBar } from "./ui/scroll-area"
+import { Skeleton } from "./ui/skeleton"
+import { Card, CardContent } from "./ui/card"
 
-  useEffect(() => {
-    const delayDebounce = setTimeout(() => {
-      if (searchQuery.trim()) {
-        fetch(`${import.meta.env.VITE_BASE_API_URL}/books/search/${searchQuery}`, {
-          headers: { "Authorization": `${localStorage.getItem("token")}` },
-        })
-          .then((res) => res.json())
-          .then((data) => setSearchResults(data))
-          .catch((err) => console.error("Search error:", err));
-      } else {
-        setSearchResults([]);
-      }
-    }, 300);
+export default function ExploreBooks({ categories = {}, loading = false }) {
+  const navigate = useNavigate()
 
-    return () => clearTimeout(delayDebounce);
-  }, [searchQuery]);
+  // Get top 5 categories with most books
+  const topCategories = Object.entries(categories)
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 5)
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-24" />
+        </div>
+        <ScrollArea className="pb-4">
+          <div className="flex space-x-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-[180px] w-[250px] rounded-xl flex-shrink-0" />
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+      </div>
+    )
+  }
+
+  if (!topCategories.length) {
+    return null
+  }
 
   return (
-    <motion.section
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="mb-12"
+      className="space-y-4"
     >
-      <div className="relative overflow-hidden rounded-3xl">
-        <div className="absolute inset-0 animated-bg opacity-10" />
-        <div className="relative px-6 py-12 sm:px-12 sm:py-16 md:py-20 lg:py-24">
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6">
-              Discover Your Next <span className="text-gradient">Favorite Book</span>
-            </motion.h1>
-            <motion.p className="text-lg sm:text-xl text-muted-foreground mb-8">
-              Explore thousands of books from fiction to non-fiction, mystery to romance
-            </motion.p>
-            <motion.div className="max-w-2xl mx-auto relative">
-              <div className="relative">
-                <Input
-                  type="text"
-                  placeholder="Search by title, author, or genre..."
-                  className="w-full h-14 pl-12 pr-4 rounded-full text-lg shadow-lg focus:ring-2 focus:ring-primary/50"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-                />
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-muted-foreground" />
-              </div>
-              {isFocused && searchResults.length > 0 && (
-                <div className="absolute top-16 left-0 w-full bg-background border border-primary/20 shadow-lg rounded-lg p-2">
-                  {searchResults.map((book) => (
-                    <div
-                      key={book.book_id}
-                      className="p-2 cursor-pointer hover:bg-primary/10 rounded-md flex items-center space-x-3"
-                      onMouseDown={() => navigate(`/book/${book.book_id}`)} // Change onClick to onMouseDown
-                    >
-                      <img
-                        src={book.cover || "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg"}
-                        alt={book.title}
-                        className="h-10 w-10 rounded-md object-cover"
-                      />
-                      <span className="text-sm font-medium">{book.title}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-            </motion.div>
-            <motion.div className="mt-8 flex flex-wrap justify-center gap-4">
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                <TrendingUp className="h-4 w-4" />
-                <span>100+ Books</span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>Updated Daily</span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                <Star className="h-4 w-4" />
-                <span>Curated Collections</span>
-              </div>
-            </motion.div>
-          </div>
-        </div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold">Explore by Category</h2>
+        <Button variant="ghost" onClick={() => navigate("/categories")} className="text-primary">
+          View All
+        </Button>
       </div>
-    </motion.section>
-  );
+
+      <ScrollArea className="pb-4">
+        <div className="flex space-x-4">
+          {topCategories.map(([categoryName, books], index) => (
+            <motion.div
+              key={categoryName}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              className="min-w-[250px]"
+            >
+              <Card
+                className="overflow-hidden cursor-pointer hover:shadow-md transition-all duration-300"
+                onClick={() => navigate("/categories")}
+              >
+                <div className="aspect-video bg-muted relative overflow-hidden">
+                  {books.length > 0 && (
+                    <img
+                      src={
+                        books[0].cover_url
+                          ? `${import.meta.env.VITE_BASE_API_URL}/books/${books[0].cover_url}`
+                          : "/placeholder.svg?height=200&width=350"
+                      }
+                      alt={categoryName}
+                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+                    <div className="p-4 text-white">
+                      <h3 className="font-bold text-lg">{categoryName}</h3>
+                      <p className="text-sm opacity-80">{books.length} books</p>
+                    </div>
+                  </div>
+                </div>
+                <CardContent className="p-4">
+                  <Button variant="ghost" size="sm" className="w-full justify-between">
+                    Explore Category
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+    </motion.div>
+  )
 }
+

@@ -269,7 +269,33 @@ class PublishersModel:
         except Exception as e:
             print(f"Error in count_publishers_by_month: {e}")
             return 0
-    
-    def close_connection(self):
-        self.conn.close()
+
+    def count_books_by_publisher(self):
+        """Returns a list of publishers with the count of books they have published"""
+        try:
+            query = """
+                SELECT p.publisher_id, u.username, COUNT(b.book_id) as book_count
+                FROM publishers p
+                JOIN users u ON p.user_id = u.user_id
+                LEFT JOIN books b ON p.user_id = b.user_id
+                GROUP BY p.publisher_id, u.username
+                ORDER BY book_count DESC
+            """
+            cursor = self.conn.cursor()
+            cursor.execute(query)
+            results = cursor.fetchall()
+            cursor.close()
+            
+            return [
+                {
+                    "publisher_id": publisher_id,
+                    "username": username,
+                    "book_count": book_count
+                }
+                for publisher_id, username, book_count in results
+            ]
+        except Exception as e:
+            print(f"Error in count_books_by_publisher: {e}")
+            return []
+
 

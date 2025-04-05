@@ -1,94 +1,102 @@
 "use client"
-import { Card } from "./ui/card"
+
 import { motion } from "framer-motion"
+import { useNavigate } from "react-router-dom"
+import { Button } from "./ui/button"
+import { Card, CardContent } from "./ui/card"
+import { ChevronRight } from "lucide-react"
+import { ScrollArea, ScrollBar } from "./ui/scroll-area"
+import { Skeleton } from "./ui/skeleton"
 
-const CategorySection = ({ categories }) => {
-  // Default categories if not provided
-  const defaultCategories = [
-    {
-      id: "1",
-      name: "Fiction",
-      image: "/placeholder.svg?height=200&width=300",
-      count: 1245,
-    },
-    {
-      id: "2",
-      name: "Science",
-      image: "/placeholder.svg?height=200&width=300",
-      count: 856,
-    },
-    {
-      id: "3",
-      name: "Business",
-      image: "/placeholder.svg?height=200&width=300",
-      count: 743,
-    },
-    {
-      id: "4",
-      name: "Biography",
-      image: "/placeholder.svg?height=200&width=300",
-      count: 532,
-    },
-    {
-      id: "5",
-      name: "History",
-      image: "/placeholder.svg?height=200&width=300",
-      count: 621,
-    },
-    {
-      id: "6",
-      name: "Self-Help",
-      image: "/placeholder.svg?height=200&width=300",
-      count: 489,
-    },
-  ]
+export default function CategorySection({ categories = {}, loading = false }) {
+  const navigate = useNavigate()
 
-  const categoriesToDisplay = categories || defaultCategories
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-24" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-[180px] rounded-xl" />
+          ))}
+        </div>
+      </div>
+    )
   }
 
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 },
+  // Check if categories is empty or not an object
+  if (!categories || typeof categories !== "object" || Object.keys(categories).length === 0) {
+    return null
   }
+
+  // Get top 6 categories with most books
+  const topCategories = Object.entries(categories)
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 6)
 
   return (
     <motion.div
-      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"
-      variants={container}
-      initial="hidden"
-      animate="show"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-4"
     >
-      {categoriesToDisplay.map((category) => (
-        <motion.div key={category.id} variants={item}>
-          <Card className="overflow-hidden h-full hover:shadow-md transition-all duration-300 group cursor-pointer">
-            <div className="relative h-40">
-              <img
-                src={category.image || "/placeholder.svg"}
-                alt={category.name}
-                className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
-                <div>
-                  <h3 className="text-white font-semibold text-xl">{category.name}</h3>
-                  <p className="text-white/80 text-sm">{category.count} books</p>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Categories</h2>
+        <Button variant="ghost" onClick={() => navigate("/categories")} className="text-primary">
+          View All
+        </Button>
+      </div>
+
+      <ScrollArea className="w-full whitespace-nowrap pb-4">
+        <div className="flex space-x-4">
+          {topCategories.map(([categoryName, books], index) => (
+            <motion.div
+              key={categoryName}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              className="min-w-[250px]"
+            >
+              <Card
+                className="overflow-hidden cursor-pointer hover:shadow-md transition-all duration-300"
+                onClick={() => navigate("/categories")}
+              >
+                <div className="aspect-video bg-muted relative overflow-hidden">
+                  {books.length > 0 && (
+                    <img
+                      src={
+                        books[0].cover_url
+                          ? `${import.meta.env.VITE_BASE_API_URL}/books/${books[0].cover_url}`
+                          : "/placeholder.svg?height=200&width=350"
+                      }
+                      alt={categoryName}
+                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+                    <div className="p-4 text-white">
+                      <h3 className="font-bold text-lg">{categoryName}</h3>
+                      <p className="text-sm opacity-80">{books.length} books</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-      ))}
+                <CardContent className="p-4">
+                  <Button variant="ghost" size="sm" className="w-full justify-between">
+                    Explore Category
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
     </motion.div>
   )
 }
-
-export default CategorySection
 
