@@ -142,18 +142,22 @@ export default function Analytics() {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Loading analytics data...</span>
+        <span className="ml-2 text-foreground">Loading analytics data...</span>
       </div>
     )
   }
 
-  // Custom tooltip styles for better contrast
+  // Custom tooltip for charts with better contrast
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-black text-white p-3 rounded-md shadow-lg border border-gray-700">
-          <p className="font-bold text-base">{`Month: ${label}`}</p>
-          <p className="text-sm">{`${payload[0].name}: ${payload[0].value}`}</p>
+        <div className="bg-background border border-border shadow-lg rounded-md p-3">
+          <p className="font-bold text-foreground">{`Month: ${label}`}</p>
+          {payload.map((entry, index) => (
+            <p key={index} className="text-sm text-foreground">
+              <span style={{ color: entry.color }}>{entry.name}</span>: {entry.value}
+            </p>
+          ))}
         </div>
       )
     }
@@ -164,7 +168,7 @@ export default function Analytics() {
     <div className="container mx-auto py-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold text-foreground">Analytics Dashboard</h1>
           <p className="text-muted-foreground mt-1">Detailed insights into your content performance</p>
         </div>
       </div>
@@ -178,7 +182,7 @@ export default function Analytics() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-none shadow-md hover:shadow-lg transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Books</CardTitle>
+            <CardTitle className="text-sm font-medium text-blue-800 dark:text-blue-200">Total Books</CardTitle>
             <Book className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           </CardHeader>
           <CardContent>
@@ -195,7 +199,7 @@ export default function Analytics() {
 
         <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-none shadow-md hover:shadow-lg transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Readers</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-800 dark:text-green-200">Total Readers</CardTitle>
             <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
           </CardHeader>
           <CardContent>
@@ -212,7 +216,7 @@ export default function Analytics() {
 
         <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-none shadow-md hover:shadow-lg transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+            <CardTitle className="text-sm font-medium text-purple-800 dark:text-purple-200">Total Views</CardTitle>
             <Eye className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           </CardHeader>
           <CardContent>
@@ -231,8 +235,8 @@ export default function Analytics() {
       <div className="grid gap-6 mt-6">
         <Card className="shadow-md bg-card border-border">
           <CardHeader>
-            <CardTitle>Monthly Views</CardTitle>
-            <CardDescription>View trends over the last 6 months</CardDescription>
+            <CardTitle className="text-foreground">Monthly Views</CardTitle>
+            <CardDescription className="text-muted-foreground">View trends over the last 6 months</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <ResponsiveContainer width="100%" height={350}>
@@ -240,17 +244,19 @@ export default function Analytics() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis
                   dataKey="name"
-                  stroke="var(--muted-foreground)"
+                  stroke="var(--foreground)"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
+                  tick={{ fill: "var(--foreground)" }}
                 />
                 <YAxis
-                  stroke="var(--muted-foreground)"
+                  stroke="var(--foreground)"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(value) => `${value}`}
+                  tick={{ fill: "var(--foreground)" }}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
@@ -258,6 +264,7 @@ export default function Analytics() {
                     paddingTop: "10px",
                     fontSize: "14px",
                     fontWeight: "bold",
+                    color: "var(--foreground)",
                   }}
                 />
                 <Line
@@ -278,8 +285,8 @@ export default function Analytics() {
       <div className="grid gap-6 md:grid-cols-2 mt-6">
         <Card className="shadow-md bg-card border-border">
           <CardHeader>
-            <CardTitle>Book Performance</CardTitle>
-            <CardDescription>Views by book title</CardDescription>
+            <CardTitle className="text-foreground">Book Performance</CardTitle>
+            <CardDescription className="text-muted-foreground">Views by book title</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <ResponsiveContainer width="100%" height={300}>
@@ -287,12 +294,19 @@ export default function Analytics() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis
                   dataKey="name"
-                  stroke="var(--muted-foreground)"
+                  stroke="var(--foreground)"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
+                  tick={{ fill: "var(--foreground)" }}
                 />
-                <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis
+                  stroke="var(--foreground)"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: "var(--foreground)" }}
+                />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="views" name="Views" fill="#6366f1" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -302,8 +316,8 @@ export default function Analytics() {
 
         <Card className="shadow-md bg-card border-border">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest readers of your books</CardDescription>
+            <CardTitle className="text-foreground">Recent Activity</CardTitle>
+            <CardDescription className="text-muted-foreground">Latest readers of your books</CardDescription>
           </CardHeader>
           <CardContent>
             {analytics.recent_readers && analytics.recent_readers.length > 0 ? (
@@ -317,7 +331,7 @@ export default function Analytics() {
                       {activity.reader.charAt(0).toUpperCase()}
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium">{activity.reader}</p>
+                      <p className="text-sm font-medium text-foreground">{activity.reader}</p>
                       <p className="text-xs text-muted-foreground">Read "{activity.book}"</p>
                     </div>
                     <div className="ml-auto text-xs text-muted-foreground">

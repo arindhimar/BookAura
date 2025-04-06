@@ -1372,3 +1372,64 @@ class BooksModel:
             logger.error(f"Failed to fetch books for publisher {publisher_id}: {e}")
             return []
 
+    def fetch_books_by_publisher_user_id(self, user_id):
+        """
+        Fetch all books published by a specific user.
+        
+        Args:
+            user_id: ID of the publisher (user_id)
+            
+        Returns:
+            List of books published by the specified user
+        """
+        try:
+            if not self.conn or not self.conn.is_connected():
+                self.conn = self.get_db_connection()
+                
+            with self.conn.cursor(dictionary=True) as cur:
+                cur.execute("""
+                    SELECT 
+                        b.book_id, 
+                        b.user_id AS author_id, 
+                        u.username AS author_name, 
+                        b.title, 
+                        b.description, 
+                        b.fileUrl, 
+                        b.audioUrl,
+                        b.is_public, 
+                        b.is_approved, 
+                        b.uploaded_at, 
+                        b.uploaded_by_role,
+                        b.coverUrl,
+                        COALESCE(GROUP_CONCAT(c.category_name SEPARATOR ', '), '') AS categories,
+                        COALESCE(v.book_view, 0) AS views
+                    FROM 
+                        books b
+                    LEFT JOIN 
+                        book_category bc ON b.book_id = bc.book_id
+                    LEFT JOIN 
+                        categories c ON bc.category_id = c.category_id
+                    LEFT JOIN 
+                        users u ON b.user_id = u.user_id
+                    LEFT JOIN 
+                        views v ON b.book_id = v.book_id
+                    WHERE 
+                        b.user_id = %s
+                    GROUP BY 
+                        b.book_id, b.user_id, u.username, b.title, b.description, 
+                        b.fileUrl, b.audioUrl, b.is_public, b.is_approved, 
+                        b.uploaded_at, b.uploaded_by_role, b.coverUrl
+                """, (user_id,))
+            
+            books = cur.fetchall()
+            
+            # Convert datetime objects to strings for JSON serialization
+            for book in books:
+                if 'uploaded_at' in book and book['uploaded_at']:
+                    book['uploaded_at'] = book['uploaded_at'].isoformat()
+            
+            return books
+        except Exception as e:
+            logger.error(f"Failed to fetch books for user {user_id}: {e}")
+            return []
+

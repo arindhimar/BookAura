@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table"
 import { Button } from "../../components/ui/button"
@@ -5,20 +7,33 @@ import { Input } from "../../components/ui/input"
 import { Label } from "../../components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog"
 import { toast } from "react-toastify"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import { Plus, Pencil, Trash2, Loader2, Search } from "lucide-react"
 
 export default function ManageCategories() {
   const [categories, setCategories] = useState([])
+  const [filteredCategories, setFilteredCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [newCategory, setNewCategory] = useState({ category_name: "" })
   const [editingCategory, setEditingCategory] = useState(null)
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
     fetchCategories()
   }, [])
+
+  useEffect(() => {
+    // Filter categories based on search query
+    if (searchQuery.trim() === "") {
+      setFilteredCategories(categories)
+    } else {
+      const query = searchQuery.toLowerCase()
+      const filtered = categories.filter((category) => category.category_name.toLowerCase().includes(query))
+      setFilteredCategories(filtered)
+    }
+  }, [categories, searchQuery])
 
   const fetchCategories = async () => {
     try {
@@ -26,15 +41,15 @@ export default function ManageCategories() {
       const token = localStorage.getItem("token")
       const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/categories/`, {
         headers: {
-          Authorization: ` ${token}`,
+          Authorization: token,
         },
       })
       if (!response.ok) {
         throw new Error("Failed to fetch categories")
       }
       const data = await response.json()
-    //   console.log(data)
       setCategories(data)
+      setFilteredCategories(data)
       setLoading(false)
     } catch (err) {
       setError(err.message)
@@ -51,7 +66,7 @@ export default function ManageCategories() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: ` ${token}`,
+          Authorization: token,
         },
         body: JSON.stringify(newCategory),
       })
@@ -60,7 +75,7 @@ export default function ManageCategories() {
       }
       await fetchCategories()
       setIsAddDialogOpen(false)
-      setNewCategory({ category_name: ""})
+      setNewCategory({ category_name: "" })
       toast.success("Category added successfully")
     } catch (err) {
       toast.error(err.message)
@@ -75,7 +90,7 @@ export default function ManageCategories() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: ` ${token}`,
+          Authorization: token,
         },
         body: JSON.stringify(editingCategory),
       })
@@ -98,7 +113,7 @@ export default function ManageCategories() {
         const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/categories/${categoryId}`, {
           method: "DELETE",
           headers: {
-            Authorization: ` ${token}`,
+            Authorization: token,
           },
         })
         if (!response.ok) {
@@ -113,56 +128,92 @@ export default function ManageCategories() {
   }
 
   if (loading) {
-    return <div>Loading...</div>
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading categories...</span>
+      </div>
+    )
   }
 
   if (error) {
-    return <div>Error: {error}</div>
+    return (
+      <div className="p-4">
+        <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded">
+          <p>Error: {error}</p>
+          <button
+            onClick={fetchCategories}
+            className="mt-2 bg-red-100 dark:bg-red-800 hover:bg-red-200 dark:hover:bg-red-700 text-red-800 dark:text-red-200 font-semibold py-1 px-3 rounded text-sm"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="container mx-auto py-10">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h1 className="text-3xl font-bold">Manage Categories</h1>
-        <Button onClick={() => setIsAddDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add Category
-        </Button>
+        <div className="flex flex-col md:flex-row gap-4 mt-4 md:mt-0 w-full md:w-auto">
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search categories..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Add Category
+          </Button>
+        </div>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            {/* <TableHead>Description</TableHead> */}
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {categories.map((category) => (
-            <TableRow key={category.category_id}>
-              <TableCell>{category.category_name}</TableCell>
-              {/* <TableCell>{category.description}</TableCell> */}
-              <TableCell>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditingCategory(category)
-                      setIsEditDialogOpen(true)
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleDeleteCategory(category.category_id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </TableCell>
+      <div className="bg-card rounded-lg shadow-md overflow-hidden border border-border">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {filteredCategories.length > 0 ? (
+              filteredCategories.map((category) => (
+                <TableRow key={category.category_id} className="hover:bg-muted/50">
+                  <TableCell className="font-medium">{category.category_name}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingCategory(category)
+                          setIsEditDialogOpen(true)
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" /> Edit
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteCategory(category.category_id)}>
+                        <Trash2 className="h-4 w-4 mr-1" /> Delete
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={2} className="text-center py-8 text-muted-foreground">
+                  No categories found matching your search
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent>
@@ -172,7 +223,7 @@ export default function ManageCategories() {
           <form onSubmit={handleAddCategory}>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">Category Name</Label>
                 <Input
                   id="name"
                   value={newCategory.category_name}
@@ -199,7 +250,7 @@ export default function ManageCategories() {
           <form onSubmit={handleEditCategory}>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="edit-name">Name</Label>
+                <Label htmlFor="edit-name">Category Name</Label>
                 <Input
                   id="edit-name"
                   value={editingCategory?.category_name || ""}
@@ -207,7 +258,6 @@ export default function ManageCategories() {
                   required
                 />
               </div>
-
             </div>
             <DialogFooter className="mt-6">
               <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>

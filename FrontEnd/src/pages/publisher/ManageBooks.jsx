@@ -9,13 +9,22 @@ import { Label } from "../../components/ui/label"
 import { Textarea } from "../../components/ui/textarea"
 import { Checkbox } from "../../components/ui/checkbox"
 import { Switch } from "../../components/ui/switch"
-import { Plus, Pencil, Trash, Loader2, AlertCircle } from "lucide-react"
+import { Plus, Pencil, Trash, Loader2, AlertCircle, Search, MoreHorizontal, BookOpen } from "lucide-react"
 import { toast } from "react-toastify"
 import { useNavigate } from "react-router-dom"
 import { Badge } from "../../components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu"
 
 export default function ManageBooks() {
   const [books, setBooks] = useState([])
+  const [filteredBooks, setFilteredBooks] = useState([])
   const [categories, setCategories] = useState([])
   const [isAddBookOpen, setIsAddBookOpen] = useState(false)
   const [isEditBookOpen, setIsEditBookOpen] = useState(false)
@@ -32,12 +41,28 @@ export default function ManageBooks() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [searchQuery, setSearchQuery] = useState("")
   const navigate = useNavigate()
 
   useEffect(() => {
     fetchBooks()
     fetchCategories()
   }, [])
+
+  useEffect(() => {
+    // Filter books based on search query
+    if (searchQuery.trim() === "") {
+      setFilteredBooks(books)
+    } else {
+      const query = searchQuery.toLowerCase()
+      const filtered = books.filter(
+        (book) =>
+          book.title.toLowerCase().includes(query) ||
+          (book.description && book.description.toLowerCase().includes(query)),
+      )
+      setFilteredBooks(filtered)
+    }
+  }, [books, searchQuery])
 
   const fetchBooks = async () => {
     if (localStorage.getItem("token") === null) {
@@ -61,6 +86,7 @@ export default function ManageBooks() {
 
       const data = await response.json()
       setBooks(data)
+      setFilteredBooks(data)
       setError(null)
     } catch (error) {
       console.error("Error fetching books:", error)
@@ -228,8 +254,9 @@ export default function ManageBooks() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading books...</span>
       </div>
     )
   }
@@ -249,15 +276,27 @@ export default function ManageBooks() {
 
   return (
     <div className="container mx-auto py-10">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h1 className="text-3xl font-bold">Manage Books</h1>
-        <Button onClick={() => setIsAddBookOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add New Book
-        </Button>
+        <div className="flex flex-col md:flex-row gap-4 mt-4 md:mt-0 w-full md:w-auto">
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search books..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button onClick={() => setIsAddBookOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Add New Book
+          </Button>
+        </div>
       </div>
 
       {books.length === 0 ? (
         <div className="text-center py-12 bg-muted/30 rounded-lg">
+          <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h2 className="text-xl font-medium mb-2">No Books Found</h2>
           <p className="text-muted-foreground mb-6">You haven't published any books yet.</p>
           <Button onClick={() => setIsAddBookOpen(true)}>
@@ -265,55 +304,74 @@ export default function ManageBooks() {
           </Button>
         </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Categories</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {books.map((book) => (
-              <TableRow key={book.book_id}>
-                <TableCell className="font-medium">{book.title}</TableCell>
-                <TableCell>{book.description ? book.description.substring(0, 50) + "..." : "No description"}</TableCell>
-                <TableCell>{book.categories || "Uncategorized"}</TableCell>
-                <TableCell>
-                  <Badge variant={book.is_approved ? "success" : "warning"}>
-                    {book.is_approved ? "Approved" : "Pending"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingBook({
-                          ...book,
-                          category_ids: book.category_ids || [],
-                        })
-                        setIsEditBookOpen(true)
-                      }}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" /> Edit
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDeleteBook(book.book_id)}>
-                      <Trash className="h-4 w-4 mr-1" /> Delete
-                    </Button>
-                  </div>
-                </TableCell>
+        <div className="bg-card rounded-lg shadow-md overflow-hidden border border-border">
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Categories</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredBooks.length > 0 ? (
+                filteredBooks.map((book) => (
+                  <TableRow key={book.book_id} className="hover:bg-muted/50">
+                    <TableCell className="font-medium">{book.title}</TableCell>
+                    <TableCell>
+                      {book.description ? book.description.substring(0, 50) + "..." : "No description"}
+                    </TableCell>
+                    <TableCell>{book.categories || "Uncategorized"}</TableCell>
+                    <TableCell>
+                      <Badge variant={book.is_approved ? "success" : "warning"}>
+                        {book.is_approved ? "Approved" : "Pending"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditingBook({
+                                ...book,
+                                category_ids: book.category_ids || [],
+                              })
+                              setIsEditBookOpen(true)
+                            }}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleDeleteBook(book.book_id)} className="text-red-600">
+                            <Trash className="mr-2 h-4 w-4" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    No books found matching your search
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       <Dialog open={isAddBookOpen} onOpenChange={setIsAddBookOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Add New Book</DialogTitle>
           </DialogHeader>
@@ -432,7 +490,7 @@ export default function ManageBooks() {
       </Dialog>
 
       <Dialog open={isEditBookOpen} onOpenChange={setIsEditBookOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Edit Book</DialogTitle>
           </DialogHeader>

@@ -59,13 +59,19 @@ export default function CategorySection({ categories = {}, loading = false }) {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.1 }}
-              className="min-w-[250px]"
+              className="min-w-[250px] max-w-[250px]" // Fixed width for consistency
             >
               <Card
-                className="overflow-hidden cursor-pointer hover:shadow-md transition-all duration-300"
+                className="overflow-hidden cursor-pointer hover:shadow-md transition-all duration-300 h-full"
                 onClick={() => navigate("/categories")}
               >
                 <div className="aspect-video bg-muted relative overflow-hidden">
+                  {/* Category name overlay at the top */}
+                  <div className="absolute top-0 left-0 right-0 z-10 p-3 bg-gradient-to-b from-black/70 to-transparent">
+                    <h3 className="font-bold text-lg text-white">{categoryName}</h3>
+                    <p className="text-sm text-white/80">{books.length} books</p>
+                  </div>
+
                   {books.length > 0 && (
                     <img
                       src={
@@ -77,12 +83,6 @@ export default function CategorySection({ categories = {}, loading = false }) {
                       className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                     />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-                    <div className="p-4 text-white">
-                      <h3 className="font-bold text-lg">{categoryName}</h3>
-                      <p className="text-sm opacity-80">{books.length} books</p>
-                    </div>
-                  </div>
                 </div>
                 <CardContent className="p-4">
                   <Button variant="ghost" size="sm" className="w-full justify-between">

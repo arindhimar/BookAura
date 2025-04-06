@@ -202,15 +202,16 @@ export default function Categories() {
             <div className="relative overflow-hidden rounded-xl h-64 bg-gradient-to-r from-primary/10 to-purple-600/10">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full h-full absolute">
-                  {/* Book Cover Collage */}
+                  {/* Book Cover Collage - Positioned to the right side only */}
                   <div className="flex justify-end h-full overflow-hidden opacity-40">
                     {featuredCategory.books.slice(0, 5).map((book, index) => (
                       <div
                         key={book.book_id}
                         className="h-full w-40 relative"
                         style={{
-                          transform: `translateX(${index * -30}px) rotate(${(index - 2) * 5}deg)`,
+                          transform: `translateX(${index * -20}px) rotate(${(index - 2) * 5}deg)`,
                           zIndex: 5 - index,
+                          right: 0,
                         }}
                       >
                         <img
@@ -280,8 +281,16 @@ export default function Categories() {
               transition={{ delay: index * 0.1, duration: 0.5 }}
             >
               <Card className="h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-primary/10 hover:border-primary/30">
+                {/* Category Header with Name and Badge */}
+                <div className="p-4 border-b bg-muted/30">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-xl font-bold">{categoryName}</h3>
+                    <Badge variant="outline">{books.length} books</Badge>
+                  </div>
+                </div>
+
+                {/* Book Cover Display - Fixed height and proper positioning */}
                 <div className="relative h-40 overflow-hidden bg-gradient-to-r from-primary/5 to-purple-600/5">
-                  {/* Book Cover Collage */}
                   <div className="absolute inset-0 flex justify-center">
                     {books.slice(0, 3).map((book, idx) => (
                       <div
@@ -303,17 +312,6 @@ export default function Categories() {
                         />
                       </div>
                     ))}
-                  </div>
-
-                  {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
-
-                  {/* Category Info */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-xl font-bold">{categoryName}</h3>
-                      <Badge variant="outline">{books.length} books</Badge>
-                    </div>
                   </div>
                 </div>
 

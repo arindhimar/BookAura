@@ -83,7 +83,7 @@ def get_dashboard_stats():
         total_moderators = len(moderator_model.fetch_all_moderators())
         
         # Get total number of books
-        total_books = len(books_model.fetch_all_books())
+        total_books = len(books_model.get_all_books())
         
         # Get total number of flagged content
         flagged_publishers = len([p for p in publishers_model.fetch_all_publishers() if p[2] == 1])  # is_flagged is at index 2
@@ -279,7 +279,7 @@ def get_all_dashboard_data():
         # Get dashboard stats
         total_publishers = len(publishers_model.fetch_all_publishers())
         total_moderators = len(moderator_model.fetch_all_moderators())
-        total_books = len(books_model.fetch_all_books())
+        total_books = len(books_model.get_all_books())
         flagged_publishers = len([p for p in publishers_model.fetch_all_publishers() if p[2] == 1])
         
         # Calculate month-over-month changes (for demonstration)

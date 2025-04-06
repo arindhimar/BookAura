@@ -43,7 +43,6 @@ export default function ManagePublishers() {
   }, [])
 
   useEffect(() => {
-    // Filter publishers based on search query and status filter
     let filtered = [...publishers]
 
     if (searchQuery) {
@@ -109,11 +108,11 @@ export default function ManagePublishers() {
     }
   }
 
-  const fetchPublisherBooks = async (publisherId) => {
+  const fetchPublisherBooks = async (userId) => {
     try {
       setLoadingBooks(true)
       const token = localStorage.getItem("token")
-      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/publisher/${publisherId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/books/user/${userId}`, {
         headers: {
           Authorization: token,
         },
@@ -136,7 +135,7 @@ export default function ManagePublishers() {
 
   const handleViewBooks = (publisher) => {
     setSelectedPublisher(publisher)
-    fetchPublisherBooks(publisher.publisher_id)
+    fetchPublisherBooks(publisher.user_id)
     setIsViewBooksOpen(true)
   }
 
@@ -416,6 +415,7 @@ export default function ManagePublishers() {
         </DialogContent>
       </Dialog>
 
+      {/* Rest of the dialog components remain the same */}
       <Dialog open={isApproveOpen} onOpenChange={setIsApproveOpen}>
         <DialogContent>
           <DialogHeader>
@@ -509,4 +509,3 @@ export default function ManagePublishers() {
     </div>
   )
 }
-
