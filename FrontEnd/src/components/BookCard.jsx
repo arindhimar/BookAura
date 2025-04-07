@@ -337,4 +337,3 @@ export default function BookCard({
     </motion.div>
   )
 }
-

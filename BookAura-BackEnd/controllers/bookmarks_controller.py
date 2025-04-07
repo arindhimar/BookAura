@@ -128,4 +128,3 @@ def delete_bookmark_by_book_and_user(book_id):
     bookmarks_model.delete_bookmark_by_book_and_user(user_id, book_id)
     return jsonify({'message': 'Bookmark deleted successfully'}), 200
 
-

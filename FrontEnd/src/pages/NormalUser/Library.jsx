@@ -496,4 +496,3 @@ function BookScroll({ books, loading, emptyMessage, emptyAction, onRemove, showP
     </div>
   )
 }
-
