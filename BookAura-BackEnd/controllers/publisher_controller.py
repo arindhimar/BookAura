@@ -140,7 +140,7 @@ def get_publisher_analytics(publisher_id):
         if not publisher:
             return jsonify({'error': 'Publisher not found'}), 404
         
-        user_id = publisher[1]  # user_id is the second field in the result
+        user_id = publisher['user_id']  # user_id is the second field in the result
         
         # Create default response with fallback data
         analytics_data = {

@@ -153,7 +153,8 @@ def get_chart_data():
             days = 90
         
         # Get daily views data
-        daily_views = books_views_model.get_daily_views(days)
+        conn = books_views_model.get_connection()
+        daily_views = books_views_model.get_daily_views(days=days, conn=conn)
         
         # Format the data for the chart
         chart_data = []
@@ -197,6 +198,9 @@ def get_chart_data():
                     "value": views
                 })
         
+        if conn and conn.is_connected():
+            conn.close()
+            
         return jsonify(chart_data)
     except Exception as e:
         logger.error(f"Error getting chart data: {e}")
@@ -210,22 +214,7 @@ def get_chart_data():
 def get_publisher_growth():
     try:
         # Get publisher growth data for the last 6 months
-        growth_data = []
-        today = datetime.now()
-        
-        for i in range(5, -1, -1):
-            month_start = today.replace(day=1) - timedelta(days=30*i)
-            month_name = month_start.strftime("%b")  # Short month name
-            
-            # Get publishers created in this month
-            # This is a placeholder - you would need to implement this in your model
-            publishers_count = publishers_model.count_publishers_by_month(month_start.month, month_start.year)
-            
-            growth_data.append({
-                "name": month_name,
-                "publishers": publishers_count
-            })
-        
+        growth_data = publishers_model.get_growth_data()
         return jsonify(growth_data)
     except Exception as e:
         logger.error(f"Error getting publisher growth: {e}")
@@ -239,8 +228,12 @@ def get_publisher_growth():
 def get_category_distribution():
     try:
         # Get book distribution by category
-        category_data = books_model.get_books_by_category()
+        conn = books_model.get_connection()
+        category_data = books_model.get_category_distribution(conn)
         
+        if conn and conn.is_connected():
+            conn.close()
+            
         return jsonify(category_data)
     except Exception as e:
         logger.error(f"Error getting category distribution: {e}")
@@ -254,9 +247,13 @@ def get_category_distribution():
 def get_top_content():
     try:
         # Get top publishers, books, and moderators
-        top_publishers = publishers_model.get_top_publishers(5)
-        top_books = books_model.get_top_books(5)
+        conn = publishers_model.get_connection()
+        top_publishers = publishers_model.get_top_publishers(limit=5, conn=conn)
+        top_books = books_model.get_top_books(conn=conn, limit=5)
         
+        if conn and conn.is_connected():
+            conn.close()
+            
         return jsonify({
             "top_publishers": top_publishers,
             "top_books": top_books
@@ -277,10 +274,10 @@ def get_all_dashboard_data():
         
         # Create a new connection for each model operation to avoid "Commands out of sync" error
         # Get dashboard stats
-        total_publishers = len(publishers_model.fetch_all_publishers())
-        total_moderators = len(moderator_model.fetch_all_moderators())
-        total_books = len(books_model.get_all_books())
-        flagged_publishers = len([p for p in publishers_model.fetch_all_publishers() if p[2] == 1])
+        total_publishers = len(publishers_model.fetch_all_publishers2())
+        total_moderators = len(moderator_model.fetch_all_moderators2())
+        total_books = len(books_model.get_all_books2())
+        flagged_publishers = len([p for p in publishers_model.fetch_all_publishers2() if p[2] == 1])
         
         # Calculate month-over-month changes (for demonstration)
         publisher_change = "15%"
@@ -326,7 +323,7 @@ def get_all_dashboard_data():
         elif time_range == '90d':
             days = 90
         
-        daily_views = books_views_model.get_daily_views(days)
+        daily_views = books_views_model.get_daily_views2(days)
         chart_data = []
         
         if time_range == '7d':
@@ -372,7 +369,7 @@ def get_all_dashboard_data():
         for i in range(5, -1, -1):
             month_start = today.replace(day=1) - timedelta(days=30*i)
             month_name = month_start.strftime("%b")
-            publishers_count = publishers_model.count_publishers_by_month(month_start.month, month_start.year)
+            publishers_count = publishers_model.count_publishers_by_month2(month_start.month, month_start.year)
             
             growth_data.append({
                 "name": month_name,
@@ -380,11 +377,11 @@ def get_all_dashboard_data():
             })
         
         # Get category distribution data
-        category_data = books_model.get_books_by_category()
+        category_data = books_model.get_books_by_category2()
         
         # Get top content data
-        top_publishers = publishers_model.get_top_publishers(5)
-        top_books = books_model.get_top_books(5)
+        top_publishers = publishers_model.get_top_publishers2(5)
+        top_books = books_model.get_top_books2(5)
         
         # Combine all data into a single response
         dashboard_data = {
@@ -405,4 +402,3 @@ def get_all_dashboard_data():
             'error': 'Failed to retrieve dashboard data',
             'message': str(e)
         }), 500
-

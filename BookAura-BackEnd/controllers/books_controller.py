@@ -511,10 +511,23 @@ def update_book(book_id):
 
 @app.route('/<int:book_id>', methods=['DELETE'])
 def delete_book(book_id):
-    if books_model.get_book_by_id(book_id) is None:
-        return jsonify({'error': 'Book not found'}), 404
-    books_model.delete_book(book_id)
-    return jsonify({'message': 'Book deleted successfully'}), 200
+    try:
+        # Get fresh model instance to ensure clean connection
+        books_model = BooksModel()
+        
+        # Check if book exists first
+        if not books_model.get_book_by_id(book_id):
+            return jsonify({'error': 'Book not found'}), 404
+
+        # Perform deletion
+        if books_model.delete_book(book_id):
+            return jsonify({'message': 'Book deleted successfully'}), 200
+        return jsonify({'error': 'Deletion failed'}), 500
+
+    except Exception as e:
+        logger.error(f"Delete book error: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 5004
+    
 
 @app.route('/unread/user', methods=['GET'])
 def get_unread_books_by_user():

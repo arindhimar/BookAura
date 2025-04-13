@@ -15,6 +15,7 @@ from controllers.category_controller import app as category_app
 from controllers.books_view_controller import app as books_views_app
 from controllers.bookmarks_controller import app as bookmarks_app
 from controllers.reading_history_controller import app as reading_history_app
+from controllers.optimized_dashboard_controller import optimized_dashboard
 
 # Load environment variables from .env
 load_dotenv()
@@ -23,10 +24,8 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-
 # Set the SECRET_KEY from the .env file
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
-
 
 # Register blueprints with their respective prefixes
 app.register_blueprint(roles_app, url_prefix='/roles')
@@ -42,7 +41,7 @@ app.register_blueprint(category_app, url_prefix='/categories')
 app.register_blueprint(books_views_app, url_prefix='/books_views')
 app.register_blueprint(bookmarks_app,url_prefix='/bookmarks')
 app.register_blueprint(reading_history_app,url_prefix='/reading_history')
-
+app.register_blueprint(optimized_dashboard, url_prefix='/optimized-dashboard')
 
 # Main driver function to run the Flask app
 if __name__ == '__main__':

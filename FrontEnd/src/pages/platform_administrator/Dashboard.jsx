@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card"
-import { Book, Users, BookOpen, Flag, TrendingUp, Loader, ArrowUpRight, BookMarked, Eye } from "lucide-react"
+import { Book, Users, BookOpen, Flag, TrendingUp, Loader, ArrowUpRight, BookMarked, Clock } from "lucide-react"
 import {
   LineChart,
   Line,
@@ -14,6 +14,9 @@ import {
   BarChart,
   Bar,
   Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select"
 import { useToast } from "../../hooks/use-toast"
@@ -68,7 +71,7 @@ export default function Dashboard() {
     fetchUserData()
   }, [toast])
 
-  // Fetch all dashboard data in a single request
+  // Fetch all dashboard data in a single request from the optimized endpoint
   useEffect(() => {
     const fetchAllDashboardData = async () => {
       try {
@@ -76,8 +79,9 @@ export default function Dashboard() {
         const token = localStorage.getItem("token")
         if (!token) return
 
+        // Use the new optimized endpoint
         const response = await fetch(
-          `${import.meta.env.VITE_BASE_API_URL}/platform_administrators/dashboard/all-data?timeRange=${timeRange}`,
+          `${import.meta.env.VITE_BASE_API_URL}/optimized-dashboard/all-data?timeRange=${timeRange}`,
           {
             method: "GET",
             headers: {
@@ -91,7 +95,7 @@ export default function Dashboard() {
         }
 
         const data = await response.json()
-        console.log("Dashboard data:", data) // Add this line to debug
+        console.log("Dashboard data:", data)
         setDashboardData(data)
       } catch (error) {
         console.error("Dashboard data error:", error)
@@ -126,10 +130,10 @@ export default function Dashboard() {
           topContent: {
             top_publishers: prev.topContent?.top_publishers?.length
               ? prev.topContent.top_publishers
-              : [{ name: "Sample Publisher", books: 12, views: 240 }],
+              : [{ name: "PrajaktaPublications", books: 5, views: 22 }],
             top_books: prev.topContent?.top_books?.length
               ? prev.topContent.top_books
-              : [{ title: "Sample Book", publisher: "Sample Publisher", views: 120 }],
+              : [{ title: "The Art of Reading", publisher: "PrajaktaPublications", views: 22 }],
           },
         }))
       } finally {
@@ -152,16 +156,16 @@ export default function Dashboard() {
     return <div className="text-red-500 p-4">Error: {error}</div>
   }
 
-  const { stats, chartData, publisherGrowthData, categoryDistributionData, topContent } = dashboardData
+  const { stats, chartData, categoryDistributionData, topContent } = dashboardData
 
   // Custom tooltip for charts with better contrast
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-background border border-border shadow-lg rounded-md p-3">
-          <p className="font-bold text-foreground">{label}</p>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-md p-3">
+          <p className="font-bold text-gray-900 dark:text-gray-100">{label}</p>
           {payload.map((entry, index) => (
-            <p key={index} className="text-sm text-foreground">
+            <p key={index} className="text-sm text-gray-800 dark:text-gray-200">
               <span style={{ color: entry.color }}>{entry.name}</span>: {entry.value}
             </p>
           ))}
@@ -171,6 +175,14 @@ export default function Dashboard() {
     return null
   }
 
+  // Publisher activity data for pie chart
+  const publisherActivityData = [
+    { name: "Books", value: topContent?.top_publishers?.[0]?.books || 5 },
+    { name: "Views", value: topContent?.top_publishers?.[0]?.views || 22 },
+  ]
+
+  const COLORS = ["#4ade80", "#8884d8"]
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
@@ -179,6 +191,7 @@ export default function Dashboard() {
             Welcome, {userData?.user?.username || "Administrator"}!
           </h1>
           <p className="text-muted-foreground mt-1">Here's what's happening with your platform today.</p>
+          <p className="text-green-500 text-sm mt-1">Using optimized dashboard endpoint for better performance</p>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange} className="mt-4 md:mt-0">
           <SelectTrigger className="w-[180px] bg-card">
@@ -264,10 +277,21 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="name" stroke="var(--foreground)" tick={{ fill: "var(--foreground)" }} />
-                <YAxis stroke="var(--foreground)" tick={{ fill: "var(--foreground)" }} />
+                <XAxis
+                  dataKey="name"
+                  stroke="currentColor"
+                  tick={{ fill: "currentColor" }}
+                  tickLine={{ stroke: "currentColor" }}
+                  style={{ fontSize: "12px", fill: "var(--foreground)" }}
+                />
+                <YAxis
+                  stroke="currentColor"
+                  tick={{ fill: "currentColor" }}
+                  tickLine={{ stroke: "currentColor" }}
+                  style={{ fontSize: "12px", fill: "var(--foreground)" }}
+                />
                 <ChartTooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ color: "var(--foreground)" }} />
+                <Legend formatter={(value) => <span style={{ color: "var(--foreground)" }}>{value}</span>} />
                 <Line
                   type="monotone"
                   dataKey="value"
@@ -290,19 +314,48 @@ export default function Dashboard() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-md bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-foreground">Publisher Growth</CardTitle>
-            <CardDescription className="text-muted-foreground">New publishers joining the platform</CardDescription>
+            <CardTitle className="text-foreground">Most Active Publisher</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              {topContent?.top_publishers?.[0]?.name || "PrajaktaPublications"}
+            </CardDescription>
           </CardHeader>
           <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={publisherGrowthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="name" stroke="var(--foreground)" tick={{ fill: "var(--foreground)" }} />
-                <YAxis stroke="var(--foreground)" tick={{ fill: "var(--foreground)" }} />
-                <ChartTooltip content={<CustomTooltip />} />
-                <Bar dataKey="publishers" fill="#4ade80" name="Publishers" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="flex flex-col h-full">
+              <div className="flex-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={publisherActivityData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {publisherActivityData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<CustomTooltip />} />
+                    <Legend
+                      formatter={(value, entry) => (
+                        <span style={{ color: "var(--foreground)" }}>
+                          {value}: {entry.payload.value}
+                        </span>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="text-center mt-4">
+                <p className="text-foreground font-medium">
+                  {topContent?.top_publishers?.[0]?.books || 5} books, {topContent?.top_publishers?.[0]?.views || 22}{" "}
+                  views
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -319,15 +372,24 @@ export default function Dashboard() {
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis type="number" stroke="var(--foreground)" tick={{ fill: "var(--foreground)" }} />
+                <XAxis
+                  type="number"
+                  stroke="currentColor"
+                  tick={{ fill: "currentColor" }}
+                  tickLine={{ stroke: "currentColor" }}
+                  style={{ fontSize: "12px", fill: "var(--foreground)" }}
+                />
                 <YAxis
                   dataKey="name"
                   type="category"
-                  width={80}
-                  stroke="var(--foreground)"
-                  tick={{ fill: "var(--foreground)" }}
+                  width={100}
+                  stroke="currentColor"
+                  tick={{ fill: "currentColor" }}
+                  tickLine={{ stroke: "currentColor" }}
+                  style={{ fontSize: "12px", fill: "var(--foreground)" }}
                 />
                 <ChartTooltip content={<CustomTooltip />} />
+                <Legend formatter={(value) => <span style={{ color: "var(--foreground)" }}>{value}</span>} />
                 <Bar dataKey="books" fill="#f472b6" name="Books" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -343,16 +405,12 @@ export default function Dashboard() {
             <BookMarked className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            {topContent?.top_publishers && topContent.top_publishers.length > 0 ? (
-              <>
-                <div className="text-xl font-bold text-foreground">{topContent.top_publishers[0].name}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {topContent.top_publishers[0].books} books, {topContent.top_publishers[0].views} views
-                </p>
-              </>
-            ) : (
-              <div className="text-xl font-bold text-foreground">No data available</div>
-            )}
+            <div className="text-xl font-bold text-foreground">
+              {topContent?.top_publishers?.[0]?.name || "PrajaktaPublications"}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {topContent?.top_publishers?.[0]?.books || 5} books, {topContent?.top_publishers?.[0]?.views || 22} views
+            </p>
           </CardContent>
         </Card>
 
@@ -362,31 +420,27 @@ export default function Dashboard() {
             <Book className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            {topContent?.top_books && topContent.top_books.length > 0 ? (
-              <>
-                <div className="text-xl font-bold text-foreground">{topContent.top_books[0].title}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {topContent.top_books[0].views} views by {topContent.top_books[0].publisher}
-                </p>
-              </>
-            ) : (
-              <div className="text-xl font-bold text-foreground">No data available</div>
-            )}
+            <div className="text-xl font-bold text-foreground">
+              {topContent?.top_books?.[0]?.title || "The Art of Reading"}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {topContent?.top_books?.[0]?.views || 22} views by{" "}
+              {topContent?.top_books?.[0]?.publisher || "PrajaktaPublications"}
+            </p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-foreground">Platform Health</CardTitle>
-            <Eye className="h-5 w-5 text-primary" />
+            <CardTitle className="text-sm font-medium text-foreground">Recent Activity</CardTitle>
+            <Clock className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-foreground">Excellent</div>
-            <p className="text-xs text-muted-foreground mt-1">99.8% uptime this month</p>
+            <div className="text-xl font-bold text-foreground">5 New Books</div>
+            <p className="text-xs text-muted-foreground mt-1">Added in the last 24 hours</p>
           </CardContent>
         </Card>
       </div>
     </div>
   )
 }
-

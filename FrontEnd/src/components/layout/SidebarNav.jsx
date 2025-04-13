@@ -16,11 +16,6 @@ const adminItems = [
     icon: Users,
   },
   {
-    title: "Manage Moderators",
-    href: "/admin/manage-moderators",
-    icon: Users,
-  },
-  {
     title: "Manage Categories",
     href: "/admin/manage-categories",
     icon: BookOpen,

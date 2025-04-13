@@ -1,243 +1,465 @@
 import mysql.connector
+from mysql.connector import pooling
+import logging
+from datetime import datetime, timedelta
+import os
+from dotenv import load_dotenv
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Load environment variables
+load_dotenv()
 
 class PublishersModel:
     def __init__(self):
-        self.conn = self.get_db_connection()
+        try:
+            # Initialize connection pool
+            self.cnxpool = mysql.connector.pooling.MySQLConnectionPool(
+                pool_name="publisher_pool",
+                pool_size=32,
+                host="localhost",
+                user="root",
+                password="root",
+                database="bookauradb"
+            )
+            logger.info("Publisher connection pool initialized")
+        except Exception as e:
+            logger.error(f"Error initializing connection pool: {e}")
+            raise
 
-    def get_db_connection(self):
-        return mysql.connector.connect(
-            host="localhost",
-            database="bookauradb",
-            user="root",
-            password="root"
-        )
+    def get_connection(self):
+        """Get a connection from the pool"""
+        return self.cnxpool.get_connection()
 
-    def fetch_all_publishers(self):
-        cur = self.conn.cursor()
+    def fetch_all_publishers(self, conn=None):
+        """Fetch all publishers with proper connection handling"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM publishers")
+            result = cursor.fetchall()
+            return result
+        except Exception as e:
+            logger.error(f"Error fetching publishers: {e}")
+            return []
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def fetch_publisher_by_id(self, publisher_id, conn=None):
+        """Fetch a publisher by ID"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM publishers WHERE publisher_id = %s", (publisher_id,))
+            result = cursor.fetchone()
+            return result
+        except Exception as e:
+            logger.error(f"Error fetching publisher by ID: {e}")
+            return None
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def fetch_publisher_by_user_id(self, user_id, conn=None):
+        """Fetch a publisher by user ID"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM publishers WHERE user_id = %s", (user_id,))
+            result = cursor.fetchone()
+            return result
+        except Exception as e:
+            logger.error(f"Error fetching publisher by user ID: {e}")
+            return None
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def create_publisher(self, user_id, conn=None):
+        """Create a new publisher"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO publishers (user_id, is_flagged, is_approved) VALUES (%s, %s, %s)",
+                (user_id, False, False)
+            )
+            conn.commit()
+            return cursor.lastrowid
+        except Exception as e:
+            logger.error(f"Error creating publisher: {e}")
+            if conn:
+                conn.rollback()
+            return None
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def delete_publisher(self, publisher_id, conn=None):
+        """Delete a publisher"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM publishers WHERE publisher_id = %s", (publisher_id,))
+            conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting publisher: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def approve_publisher(self, publisher_id, conn=None):
+        """Approve a publisher"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE publishers SET is_approved = %s WHERE publisher_id = %s",
+                (True, publisher_id)
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error approving publisher: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def reject_publisher(self, publisher_id, feedback, conn=None):
+        """Reject a publisher with feedback"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE publishers SET is_approved = %s, feedback = %s WHERE publisher_id = %s",
+                (False, feedback, publisher_id)
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error rejecting publisher: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def flag_publisher(self, publisher_id, reason, conn=None):
+        """Flag a publisher with a reason"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE publishers SET is_flagged = %s, flag_reason = %s WHERE publisher_id = %s",
+                (True, reason, publisher_id)
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error flagging publisher: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def unflag_publisher(self, publisher_id, conn=None):
+        """Unflag a publisher"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE publishers SET is_flagged = %s, flag_reason = %s WHERE publisher_id = %s",
+                (False, None, publisher_id)
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error unflagging publisher: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def count_publishers_by_month(self, month, year, conn=None):
+        """Count publishers created in a specific month and year"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor()
+            
+            # Use created_at instead of registration_date
+            cursor.execute(
+                "SELECT COUNT(*) FROM publishers JOIN users ON publishers.user_id = users.user_id "
+                "WHERE MONTH(users.created_at) = %s AND YEAR(users.created_at) = %s",
+                (month, year)
+            )
+            
+            result = cursor.fetchone()
+            return result[0] if result else 0
+        except Exception as e:
+            logger.error(f"Error counting publishers by month: {e}")
+            return 0
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def get_growth_data(self, conn=None):
+        """Get publisher growth data for the last 6 months"""
+        close_conn = False
+        cursor = None
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+            
+            cursor = conn.cursor()
+        
+            growth_data = []
+            today = datetime.now()
+        
+            for i in range(5, -1, -1):
+                month_start = today.replace(day=1) - timedelta(days=30*i)
+                month_name = month_start.strftime("%b")  # Short month name
+            
+                # Use created_at instead of registration_date
+                try:
+                    cursor.execute(
+                        "SELECT COUNT(*) FROM publishers JOIN users ON publishers.user_id = users.user_id "
+                        "WHERE MONTH(users.created_at) = %s AND YEAR(users.created_at) = %s",
+                        (month_start.month, month_start.year)
+                    )
+                
+                    result = cursor.fetchone()
+                    publishers_count = result[0] if result else 0
+                
+                    growth_data.append({
+                        "name": month_name,
+                        "publishers": publishers_count
+                    })
+                except Exception as e:
+                    logger.error(f"Growth data error: {e}")
+                    growth_data.append({
+                        "name": month_name,
+                        "publishers": 0
+                    })
+        
+            return growth_data
+        except Exception as e:
+            logger.error(f"Error getting growth data: {e}")
+            return []
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def get_top_publishers(self, limit=5, conn=None):
+        """Get top publishers by number of books and views"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor(dictionary=True)
+            
+            query = """
+            SELECT 
+                u.username AS name,
+                COUNT(DISTINCT b.book_id) AS books,
+                COALESCE(SUM(v.book_view), 0) AS views
+            FROM 
+                publishers p
+                JOIN users u ON p.user_id = u.user_id
+                LEFT JOIN books b ON b.user_id = p.user_id
+                LEFT JOIN views v ON b.book_id = v.book_id
+            GROUP BY 
+                p.user_id, u.username
+            ORDER BY 
+                views DESC, books DESC
+            LIMIT %s
+            """
+            
+            cursor.execute(query, (limit,))
+            result = cursor.fetchall()
+            return result
+        except Exception as e:
+            logger.error(f"Error getting top publishers: {e}")
+            return []
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def get_monthly_growth(self, conn=None):
+        """Calculate month-over-month growth percentage for publishers"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor()
+            
+            today = datetime.now()
+            current_month = today.month
+            current_year = today.year
+            
+            # Get previous month
+            prev_month = current_month - 1
+            prev_year = current_year
+            if prev_month == 0:
+                prev_month = 12
+                prev_year -= 1
+            
+            # Use created_at instead of registration_date
+            cursor.execute(
+                "SELECT COUNT(*) FROM publishers JOIN users ON publishers.user_id = users.user_id "
+                "WHERE MONTH(users.created_at) = %s AND YEAR(users.created_at) = %s",
+                (current_month, current_year)
+            )
+            current_count = cursor.fetchone()[0]
+            
+            cursor.execute(
+                "SELECT COUNT(*) FROM publishers JOIN users ON publishers.user_id = users.user_id "
+                "WHERE MONTH(users.created_at) = %s AND YEAR(users.created_at) = %s",
+                (prev_month, prev_year)
+            )
+            prev_count = cursor.fetchone()[0]
+            
+            if prev_count == 0:
+                return 100  # If no publishers last month, growth is 100%
+            
+            growth = ((current_count - prev_count) / prev_count) * 100
+            return round(growth, 1)
+        except Exception as e:
+            logger.error(f"Error calculating monthly growth: {e}")
+            return 0
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+                
+    def count_new_publishers(self, days=30, conn=None):
+        """Count new publishers in the last X days"""
+        close_conn = False
+        try:
+            if conn is None:
+                conn = self.get_connection()
+                close_conn = True
+                
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM publishers p
+                JOIN users u ON p.user_id = u.user_id
+                WHERE u.created_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+            """, (days,))
+            result = cursor.fetchone()
+            return result[0] if result else 0
+        except Exception as e:
+            logger.error(f"Error counting new publishers: {e}")
+            return 0
+        finally:
+            if cursor:
+                cursor.close()
+            if close_conn and conn and conn.is_connected():
+                conn.close()
+
+    def fetch_all_publishers2(self):
+        conn = self.get_connection()
+        cur = conn.cursor()
         cur.execute('SELECT * FROM publishers')
         publishers = cur.fetchall()
         cur.close()
         return publishers
 
-    def fetch_publisher_by_id(self, publisher_id):
-        cur = self.conn.cursor()
-        cur.execute('SELECT * FROM publishers WHERE publisher_id = %s', (publisher_id,))
-        publisher = cur.fetchone()
-        cur.close()
-        return publisher
-    
-    def fetch_publisher_by_user_id(self, user_id):
-        query = "SELECT * FROM publishers WHERE user_id = %s"
-        cur = self.conn.cursor()
-        cur.execute(query, (user_id,))
-        result = cur.fetchone()
-        cur.close()
-        
-        if result:
-            # Convert the result to a dictionary
-            return {
-                'publisher_id': result[0],
-                'user_id': result[1],
-                'is_flagged': result[2],
-                'is_approved': result[3],
-            }
-        return None    
-    
-    def create_publisher(self, user_id):
-        cur = self.conn.cursor()
-        cur.execute('INSERT INTO publishers (user_id) VALUES (%s)', (user_id,))
-        self.conn.commit()
-        cur.close()
-
-    def delete_publisher(self, publisher_id):
-        cur = self.conn.cursor()
-        cur.execute('DELETE FROM publishers WHERE publisher_id = %s', (publisher_id,))
-        self.conn.commit()
-        cur.close()
-        
-    def approve_publisher(self, publisher_id):
-        cur = self.conn.cursor()
-        cur.execute('UPDATE publishers SET is_approved = 1 WHERE publisher_id = %s', (publisher_id,))
-        self.conn.commit()
-        cur.close()
-    
-    def reject_publisher(self, publisher_id, feedback=None):
-        cur = self.conn.cursor()
-        cur.execute('UPDATE publishers SET is_approved = 0 WHERE publisher_id = %s', (publisher_id,))
-        self.conn.commit()
-        
-        # If feedback is provided, store it
-        if feedback and feedback.strip():
-            try:
-                cur.execute('''
-                    INSERT INTO publisher_feedback (publisher_id, feedback, created_at)
-                    VALUES (%s, %s, NOW())
-                ''', (publisher_id, feedback))
-                self.conn.commit()
-            except Exception as e:
-                print(f"Error storing publisher feedback: {e}")
-        
-        cur.close()
-    
-    def flag_publisher(self, publisher_id, reason=None):
-        cur = self.conn.cursor()
-        cur.execute('UPDATE publishers SET is_flagged = 1 WHERE publisher_id = %s', (publisher_id,))
-        self.conn.commit()
-        
-        # If a reason is provided, store it
-        if reason and reason.strip():
-            try:
-                cur.execute('''
-                    INSERT INTO publisher_reports (publisher_id, reason, reported_at)
-                    VALUES (%s, %s, NOW())
-                ''', (publisher_id, reason))
-                self.conn.commit()
-            except Exception as e:
-                print(f"Error storing publisher flag reason: {e}")
-        
-        cur.close()
-    
-    def unflag_publisher(self, publisher_id):
-        cur = self.conn.cursor()
-        cur.execute('UPDATE publishers SET is_flagged = 0 WHERE publisher_id = %s', (publisher_id,))
-        self.conn.commit()
-        cur.close()
-        
-    def is_approved(self, user_id):
-        cur = self.conn.cursor()
-        cur.execute('SELECT is_approved FROM publishers WHERE user_id = %s', (user_id,))
-        result = cur.fetchone()
-        cur.close()
-        if result:
-            return result[0]
-        return None
-    
-    def get_publisher_analytics(self, publisher_id):
-        """Get analytics data for a publisher"""
+    def count_publishers_by_month2(self, month, year):
+        """Count the number of publishers created in a specific month"""
         try:
-            # Get the user_id for this publisher
-            cur = self.conn.cursor()
-            cur.execute('SELECT user_id FROM publishers WHERE publisher_id = %s', (publisher_id,))
-            publisher_result = cur.fetchone()
-            
-            if not publisher_result:
-                return {
-                    'total_books': 0,
-                    'total_readers': 0,
-                    'monthly_revenue': []
-                }
-            
-            user_id = publisher_result[0]
-            
-            # Get total books published
-            cur.execute('''
-                SELECT COUNT(*) as total_books
-                FROM books
-                WHERE user_id = %s
-            ''', (user_id,))
-            total_books_result = cur.fetchone()
-            total_books = total_books_result[0] if total_books_result else 0
-            
-            # Get total readers (users who have read the publisher's books)
-            cur.execute('''
-                SELECT COUNT(DISTINCT user_id) as total_readers
-                FROM reading_history
-                WHERE book_id IN (
-                    SELECT book_id FROM books
-                    WHERE user_id = %s
-                )
-            ''', (user_id,))
-            total_readers_result = cur.fetchone()
-            total_readers = total_readers_result[0] if total_readers_result else 0
-            
-            # Get monthly revenue data (real data if available, otherwise sample data)
-            try:
-                cur.execute('''
-                    SELECT 
-                        MONTHNAME(transaction_date) as month_name,
-                        SUM(amount) as total
-                    FROM transactions
-                    WHERE publisher_id = %s
-                    AND transaction_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-                    GROUP BY MONTH(transaction_date)
-                    ORDER BY MONTH(transaction_date)
-                ''', (publisher_id,))
-                
-                revenue_results = cur.fetchall()
-                
-                if revenue_results:
-                    monthly_revenue = [
-                        {"name": month, "total": float(total)} 
-                        for month, total in revenue_results
-                    ]
-                else:
-                    # Sample data if no transactions found
-                    monthly_revenue = [
-                        {"name": "Jan", "total": 4500},
-                        {"name": "Feb", "total": 3800},
-                        {"name": "Mar", "total": 5200},
-                        {"name": "Apr", "total": 4800},
-                        {"name": "May", "total": 5900},
-                        {"name": "Jun", "total": 6500}
-                    ]
-            except Exception as e:
-                print(f"Error getting revenue data: {e}")
-                # Fallback to sample data
-                monthly_revenue = [
-                    {"name": "Jan", "total": 4500},
-                    {"name": "Feb", "total": 3800},
-                    {"name": "Mar", "total": 5200},
-                    {"name": "Apr", "total": 4800},
-                    {"name": "May", "total": 5900},
-                    {"name": "Jun", "total": 6500}
-                ]
-            
-            cur.close()
-            
-            return {
-                'total_books': total_books,
-                'total_readers': total_readers,
-                'monthly_revenue': monthly_revenue
-            }
+            import random
+            return random.randint(10, 50)
         except Exception as e:
-            print(f"Error getting publisher analytics: {e}")
-            return {
-                'total_books': 0,
-                'total_readers': 0,
-                'monthly_revenue': []
-            }
-
-    def execute_query(self, query, params=None):
-        """Execute a query and return the results"""
-        try:
-            cursor = self.conn.cursor()
-            if params:
-                cursor.execute(query, params)
-            else:
-                cursor.execute(query)
-            
-            result = cursor.fetchall()
-            cursor.close()
-            return result
-        except Exception as e:
-            print(f"Error executing query: {e}")
-            return None
-
-    def count_publishers(self, days=None):
-        """Count the total number of publishers, optionally within a time period"""
-        try:
-            query = "SELECT COUNT(*) FROM publishers"
-            
-            if days:
-                query += f" WHERE user_id IN (SELECT user_id FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL {days} DAY))"
-            
-            result = self.execute_query(query)
-            return result[0][0] if result else 0
-        except Exception as e:
-            print(f"Error in count_publishers: {e}")
+            print(f"Error in count_publishers_by_month: {e}")
             return 0
-    
-    def get_top_publishers(self, limit=5):
+        
+        
+    def get_top_publishers2(self, limit=5):
         """Get the top publishers by number of books and views"""
         try:
             query = """
@@ -250,8 +472,8 @@ class PublishersModel:
                 ORDER BY total_views DESC
                 LIMIT %s
             """
-            
-            cursor = self.conn.cursor()
+            conn = self.get_connection()
+            cursor = conn.cursor()
             cursor.execute(query, (limit,))
             results = cursor.fetchall()
             cursor.close()
@@ -260,42 +482,15 @@ class PublishersModel:
         except Exception as e:
             print(f"Error in get_top_publishers: {e}")
             return []
-
-    def count_publishers_by_month(self, month, year):
-        """Count the number of publishers created in a specific month"""
+    
+    def is_approved(self,user_id):
+        """Check if a publisher is approved"""
         try:
-            import random
-            return random.randint(10, 50)
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT is_approved FROM publishers WHERE user_id = %s", (user_id,))
+            result = cursor.fetchone()
+            return result[0] if result else False
         except Exception as e:
-            print(f"Error in count_publishers_by_month: {e}")
-            return 0
-
-    def count_books_by_publisher(self):
-        """Returns a list of publishers with the count of books they have published"""
-        try:
-            query = """
-                SELECT p.publisher_id, u.username, COUNT(b.book_id) as book_count
-                FROM publishers p
-                JOIN users u ON p.user_id = u.user_id
-                LEFT JOIN books b ON p.user_id = b.user_id
-                GROUP BY p.publisher_id, u.username
-                ORDER BY book_count DESC
-            """
-            cursor = self.conn.cursor()
-            cursor.execute(query)
-            results = cursor.fetchall()
-            cursor.close()
-            
-            return [
-                {
-                    "publisher_id": publisher_id,
-                    "username": username,
-                    "book_count": book_count
-                }
-                for publisher_id, username, book_count in results
-            ]
-        except Exception as e:
-            print(f"Error in count_books_by_publisher: {e}")
-            return []
-
-
+            print(f"Error in is_approved: {e}")
+            return False

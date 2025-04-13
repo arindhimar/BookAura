@@ -1,44 +1,23 @@
-import mysql.connector
+import logging
 from datetime import datetime, timedelta
+from models.base_model import BaseModel
 
-class BooksViewsModel:
+# Configure logging
+logger = logging.getLogger(__name__)
+
+class BooksViewsModel(BaseModel):
     def __init__(self):
-        self.conn = self.get_db_connection()
-        
-    def get_db_connection(self):
-        return mysql.connector.connect(
-            host="localhost",
-            database="bookauradb",
-            user="root",
-            password="root"
-        )
-        
-    def execute_query(self, query, params=None):
-        """Execute a query and return the results"""
-        try:
-            cursor = self.conn.cursor()
-            if params:
-                cursor.execute(query, params)
-            else:
-                cursor.execute(query)
-            
-            result = cursor.fetchall()
-            cursor.close()
-            return result
-        except Exception as e:
-            print(f"Error executing query: {e}")
-            return None
+        super().__init__()
+        logger.info("Book views model initialized")
         
     def fetch_all_books_views(self):
-        cur = self.conn.cursor()
-        cur.execute('SELECT * FROM views')
-        books = cur.fetchall()
-        cur.close()
-        return books
+        """Fetch all book views."""
+        query = 'SELECT * FROM views'
+        return self.execute_query(query)
     
     def fetch_book_views_by_id(self, book_id):
-        cur = self.conn.cursor()
-        cur.execute("""
+        """Fetch views for a specific book."""
+        query = """
             SELECT 
                 v.book_id, 
                 v.book_view
@@ -46,141 +25,113 @@ class BooksViewsModel:
                 views v
             WHERE 
                 v.book_id = %s
-            """, (book_id,))
-        book = cur.fetchone()
-        cur.close()
-        return book
+            """
+        return self.execute_query_single(query, (book_id,))
     
     def add_view(self, book_id):
-        #first check if data already exists in the table if yes then update the view count else insert new record
-        cur = self.conn.cursor()
-        cur.execute("SELECT * FROM views WHERE book_id = %s", (book_id,))
-        book = cur.fetchone()
-        if book is None:
-            cur.execute("INSERT INTO views (book_id, book_view) VALUES (%s, 1)", (book_id,))
-        else:
-            cur.execute("UPDATE views SET book_view = book_view + 1 WHERE book_id = %s", (book_id,))
+        """Add a view to a book."""
+        # First check if data already exists
+        check_query = "SELECT * FROM views WHERE book_id = %s"
+        book = self.execute_query_single(check_query, (book_id,))
         
-        self.conn.commit()
-        cur.close()
-        return True
-    
+        if book is None:
+            insert_query = "INSERT INTO views (book_id, book_view) VALUES (%s, 1)"
+            return self.execute_query(insert_query, (book_id,), commit=True)
+        else:
+            update_query = "UPDATE views SET book_view = book_view + 1 WHERE book_id = %s"
+            return self.execute_query(update_query, (book_id,), commit=True)
     
     def get_daily_views(self, days=7):
-        """Get daily view counts for the specified number of days"""
+        """Handle decimal conversion properly."""
         try:
-            query = """
-                SELECT SUM(book_view) as total_views
-                FROM views
-            """
+            days = int(days)
             
-            result = self.execute_query(query)
-            total_views = int(result[0][0]) if result and result[0][0] else 0  # Convert to int
-            
+            # Get total views
+            query = "SELECT SUM(book_view) AS total_views FROM views"
+            result = self.execute_query_single(query)
+            total_views = float(result['total_views']) if result and result['total_views'] else 0.0
+
             daily_data = []
             today = datetime.now()
-            
-            if total_views > 0:
-                remaining_views = total_views
-                for i in range(days):
-                    date = today - timedelta(days=i)
-                    # Convert to float before multiplication
-                    day_views = int(float(remaining_views) * (0.7 if i == 0 else 0.1 / (days - 1)))
-                    if i == days - 1:
-                        day_views = remaining_views
-                    remaining_views -= day_views
-                    daily_data.append((date.date(), day_views))
-            else:
-                for i in range(days):
-                    date = today - timedelta(days=i)
-                    daily_data.append((date.date(), 0))
-            
-            return daily_data
-        except Exception as e:
-            print(f"Error in get_daily_views: {e}")
-            # Return dummy data
-            return [(datetime.now().date() - timedelta(days=i), 0) for i in range(days)]
 
-    def get_monthly_views_by_publisher(self, publisher_id, month=None, year=None):
-        """Get total views for a publisher's books"""
-        try:
-            # Basic query that doesn't rely on updated_at
-            query = """
-                SELECT COALESCE(SUM(v.book_view), 0) as total_views
-                FROM views v
-                JOIN books b ON v.book_id = b.book_id
-                WHERE b.user_id = %s
-            """
-            
-            params = [publisher_id]
-            
-            cursor = self.conn.cursor()
-            cursor.execute(query, params)
-            result = cursor.fetchone()
-            cursor.close()
-            
-            return result[0] if result else 0
+            if total_views > 0:
+                remaining = total_views
+                for i in range(days):
+                    date = today - timedelta(days=i)
+                    if i == 0:
+                        views = remaining * 0.7
+                    elif i == days - 1:
+                        views = remaining
+                    else:
+                        views = remaining * (0.3 / (days - 1))
+                    remaining -= views
+                    daily_data.append((date.date(), int(views)))
+            else:
+                daily_data = [(datetime.now().date() - timedelta(days=i), 0) 
+                             for i in range(days)]
+                return daily_data
         except Exception as e:
-            print(f"Error in get_monthly_views_by_publisher: {e}")
-            return 0
+            logger.error(f"Daily views error: {e}")
+            return [(datetime.now().date() - timedelta(days=i), 0) 
+                    for i in range(days)]
+    
+    def get_monthly_views_by_publisher(self, publisher_id, month=None, year=None):
+        """Get total views for a publisher's books."""
+        query = """
+            SELECT COALESCE(SUM(v.book_view), 0) as total_views
+            FROM views v
+            JOIN books b ON v.book_id = b.book_id
+            WHERE b.user_id = %s
+        """
+        
+        result = self.execute_query_single(query, (publisher_id,))
+        return result['total_views'] if result else 0
             
     def get_total_views_by_publisher(self, publisher_id):
-        """Get total views for all books by a publisher"""
-        try:
-            query = """
-                SELECT COALESCE(SUM(v.book_view), 0) as total_views
-                FROM views v
-                JOIN books b ON v.book_id = b.book_id
-                WHERE b.user_id = %s
-            """
-            
-            cursor = self.conn.cursor()
-            cursor.execute(query, (publisher_id,))
-            result = cursor.fetchone()
-            cursor.close()
-            
-            return result[0] if result else 0
-        except Exception as e:
-            print(f"Error in get_total_views_by_publisher: {e}")
-            return 0
+        """Get total views for all books by a publisher."""
+        query = """
+            SELECT COALESCE(SUM(v.book_view), 0) as total_views
+            FROM views v
+            JOIN books b ON v.book_id = b.book_id
+            WHERE b.user_id = %s
+        """
+        
+        result = self.execute_query_single(query, (publisher_id,))
+        return result['total_views'] if result else 0
             
     def get_views_distribution_by_publisher(self, publisher_id):
-        """Get view distribution across books for a publisher"""
-        try:
-            query = """
-                SELECT b.title, v.book_view
-                FROM views v
-                JOIN books b ON v.book_id = b.book_id
-                WHERE b.user_id = %s
-                ORDER BY v.book_view DESC
-                LIMIT 5
-            """
-            
-            cursor = self.conn.cursor()
-            cursor.execute(query, (publisher_id,))
-            results = cursor.fetchall()
-            cursor.close()
-            
-            return [{"name": title, "views": views} for title, views in results]
-        except Exception as e:
-            print(f"Error in get_views_distribution_by_publisher: {e}")
-            return []
+        """Get view distribution across books for a publisher."""
+        query = """
+            SELECT b.title, v.book_view
+            FROM views v
+            JOIN books b ON v.book_id = b.book_id
+            WHERE b.user_id = %s
+            ORDER BY v.book_view DESC
+            LIMIT 5
+        """
+        
+        results = self.execute_query(query, (publisher_id,))
+        return [{"name": result['title'], "views": result['book_view']} for result in results]
             
     def get_total_views(self):
-        """Get total views across all books"""
-        try:
-            query = """
-                SELECT COALESCE(SUM(book_view), 0) as total_views
-                FROM views
-            """
-            
-            cursor = self.conn.cursor()
-            cursor.execute(query)
-            result = cursor.fetchone()
-            cursor.close()
-            
-            return result[0] if result else 0
-        except Exception as e:
-            print(f"Error in get_total_views: {e}")
-            return 0
-
+        """Get total views across all books."""
+        query = """
+            SELECT COALESCE(SUM(book_view), 0) as total_views
+            FROM views
+        """
+        
+        result = self.execute_query_single(query)
+        return result['total_views'] if result else 0
+                
+    def get_views_timeline(self, days=30):
+        """Get views timeline for the specified number of days."""
+        # Since we don't have actual daily view data, we'll simulate it
+        daily_views = self.get_daily_views(days=days)
+        
+        # Format for the frontend
+        timeline_data = [
+            {"date": date.strftime("%Y-%m-%d"), "views": views}
+            for date, views in daily_views
+        ]
+        
+        return timeline_data

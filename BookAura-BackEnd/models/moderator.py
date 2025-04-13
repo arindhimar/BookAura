@@ -12,12 +12,20 @@ class ModeratorsModel:
             password="root"
         )
 
-    def fetch_all_moderators(self):
-        cur = self.conn.cursor()
-        cur.execute('SELECT * FROM moderators')
-        moderators = cur.fetchall()
-        cur.close()
-        return moderators
+    def fetch_all_moderators(self, conn=None):
+        """Get all moderators with optional connection reuse"""
+        close_conn = False
+        try:
+            if not conn:
+                conn = self._connection_pool.get_connection()
+                close_conn = True
+
+            with conn.cursor(dictionary=True) as cur:
+                cur.execute("SELECT * FROM moderators")
+                return cur.fetchall()
+        finally:
+            if close_conn and conn.is_connected():
+                conn.close()
 
     def fetch_moderator_by_id(self, moderator_id):
         cur = self.conn.cursor()
@@ -62,6 +70,24 @@ class ModeratorsModel:
         cur.execute('UPDATE moderators SET is_flagged = 0 WHERE moderator_id = %s', (moderator_id,))
         self.conn.commit()
         cur.close()
+        
+    def get_monthly_growth(self, conn=None):
+        close_conn = False
+        try:
+            if not conn:
+                conn = self._connection_pool.get_connection()
+                close_conn = True
+
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COUNT(*) 
+                    FROM moderators 
+                    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+                """)
+                return cur.fetchone()[0]
+        finally:
+            if close_conn and conn.is_connected():
+                conn.close()
     
     def get_dashboard_stats(self):
         """Get statistics for the moderator dashboard"""
@@ -197,6 +223,13 @@ class ModeratorsModel:
             print(f"Error in count_moderators: {e}")
             return 0
 
+    def fetch_all_moderators2(self):
+        cur = self.conn.cursor()
+        cur.execute('SELECT * FROM moderators')
+        moderators = cur.fetchall()
+        cur.close()
+        return moderators
+    
     def close_connection(self):
         self.conn.close()
 
