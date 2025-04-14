@@ -6,6 +6,7 @@ import re
 import sys
 import time
 import traceback
+import io
 from pathlib import Path
 
 import fitz  # PyMuPDF
@@ -28,11 +29,11 @@ logger = logging.getLogger('translation')
 TRANSLATE_URL = "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/compute"
 MARATHI_TRANSLATE_MODEL_ID = "641d1d7c8ecee6735a1b37c3"  # English → Marathi
 HINDI_TRANSLATE_MODEL_ID = "641d1d6592a6a31751ff1f49"   # English → Hindi
-MARATHI_TTS_MODEL_ID = "6576a25f4e7d42484da63537"  # Marathi TTS - Updated model ID
-HINDI_TTS_MODEL_ID = "633c021bfb796d5e100d4ff9"  # Hindi TTS - Updated model ID
+MARATHI_TTS_MODEL_ID = "6576a25f4e7d42484da63537"  # Marathi TTS
+HINDI_TTS_MODEL_ID = "633c021bfb796d5e100d4ff9"  # Hindi TTS
 
 # Chunk sizes optimized for API limits
-TRANSLATE_CHUNK_SIZE = 200000  # Reduced to avoid API limits
+TRANSLATE_CHUNK_SIZE = 4000  # Reduced to avoid API limits
 TTS_CHUNK_SIZE = 1000  # Reduced to avoid API limits
 
 def sanitize_text(text):
@@ -138,7 +139,17 @@ def tts_chunk(text, model_id, language):
         if "audio" in result and len(result["audio"]) > 0 and "audioContent" in result["audio"][0]:
             audio_base64 = result["audio"][0]["audioContent"]
             logger.info(f"Successfully received audio for {language} chunk")
-            return base64.b64decode(audio_base64)
+            
+            # Decode base64 audio content
+            try:
+                audio_data = base64.b64decode(audio_base64)
+                # Validate that this is actual audio data (check for WAV header)
+                if audio_data[:4] != b'RIFF':
+                    logger.warning(f"Received data doesn't appear to be valid WAV format")
+                return audio_data
+            except Exception as decode_error:
+                logger.error(f"Failed to decode audio data: {decode_error}")
+                return None
         else:
             logger.error(f"Unexpected TTS response format: {result}")
             return None
@@ -178,46 +189,138 @@ def translate_text_chunked(text, model_id, target_lang):
     return translated_text
 
 def generate_tts_audio(text, model_id, language):
-    """Generate TTS audio in chunks"""
+    """Generate TTS audio in chunks and properly combine them"""
     logger.info(f"Generating TTS audio for {language}...")
     chunks = split_into_chunks(text, TTS_CHUNK_SIZE)
     logger.info(f"Split into {len(chunks)} chunks for TTS")
     
-    audio_chunks = []
-    for i, chunk in enumerate(chunks):
-        logger.info(f"Processing TTS chunk {i+1}/{len(chunks)} for {language}")
-        audio_chunk = tts_chunk(chunk, model_id, language)
-        
-        if audio_chunk:
-            audio_chunks.append(audio_chunk)
-            # Log progress periodically
-            if (i+1) % 5 == 0 or i+1 == len(chunks):
-                logger.info(f"Progress: {i+1}/{len(chunks)} TTS chunks processed for {language}")
-        else:
-            logger.warning(f"Failed to generate audio for chunk {i+1} for {language}")
+    # Use pydub to properly combine audio segments
+    combined_audio = None
+    temp_files = []
+    
+    try:
+        for i, chunk in enumerate(chunks):
+            if not chunk.strip():
+                logger.warning(f"Skipping empty chunk {i+1}")
+                continue
+                
+            logger.info(f"Processing TTS chunk {i+1}/{len(chunks)} for {language}")
+            audio_data = tts_chunk(chunk, model_id, language)
             
-        # Respectful delay between API calls
-        time.sleep(1.5)
-    
-    if not audio_chunks:
-        logger.error(f"No audio chunks were successfully generated for {language}")
+            if audio_data:
+                # Save to temporary file
+                temp_file = f"temp_{language}_chunk_{i+1}.wav"
+                with open(temp_file, "wb") as f:
+                    f.write(audio_data)
+                temp_files.append(temp_file)
+                
+                # Load with pydub to validate and prepare for combining
+                try:
+                    segment = AudioSegment.from_wav(temp_file)
+                    logger.info(f"Chunk {i+1}: Valid audio segment of length {len(segment)}ms")
+                    
+                    # Initialize or append to combined audio
+                    if combined_audio is None:
+                        combined_audio = segment
+                    else:
+                        combined_audio += segment
+                except Exception as audio_error:
+                    logger.error(f"Error processing audio chunk {i+1}: {audio_error}")
+            else:
+                logger.warning(f"Failed to generate audio for chunk {i+1}")
+            
+            # Respectful delay between API calls
+            time.sleep(1.5)
+        
+        # Check if we have any valid audio
+        if combined_audio is None:
+            logger.error(f"No valid audio chunks were generated for {language}")
+            return None
+            
+        logger.info(f"Successfully combined {len(temp_files)} audio chunks for {language}, total length: {len(combined_audio)}ms")
+        
+        # Export as MP3 with proper settings
+        mp3_data = io.BytesIO()
+        combined_audio.export(
+            mp3_data, 
+            format="mp3",
+            bitrate="128k",  # Adjust bitrate for better quality/size balance
+            parameters=["-ac", "1"]  # Mono audio to reduce file size
+        )
+        
+        return mp3_data.getvalue()
+        
+    except Exception as e:
+        logger.error(f"Error generating TTS audio: {e}")
+        logger.error(traceback.format_exc())
         return None
-    
-    logger.info(f"Combining {len(audio_chunks)} audio chunks for {language}")
-    audio_data = b"".join(audio_chunks)
-    logger.info(f"Combined audio data size: {len(audio_data)} bytes")
-    return audio_data
+    finally:
+        # Clean up temporary files
+        for temp_file in temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to remove temp file {temp_file}: {cleanup_error}")
 
 def generate_english_tts(text, output_path):
-    """Generate English TTS using pyttsx3"""
+    """Generate English TTS using pyttsx3 with optimized settings"""
     try:
         logger.info(f"Generating English TTS using pyttsx3...")
         engine = pyttsx3.init()
         engine.setProperty('rate', 150)  # Adjust speaking speed
-        engine.save_to_file(text, output_path)
-        engine.runAndWait()
-        logger.info(f"English TTS audio saved to {output_path}")
-        return True
+        
+        # Split text into smaller chunks to avoid memory issues
+        chunks = split_into_chunks(text, 5000)  # Process 5000 chars at a time
+        
+        # Use temporary WAV file
+        temp_wav = "temp_english.wav"
+        
+        # Process each chunk
+        for i, chunk in enumerate(chunks):
+            logger.info(f"Processing English TTS chunk {i+1}/{len(chunks)}")
+            
+            if i == 0:
+                # First chunk - create new file
+                engine.save_to_file(chunk, temp_wav)
+            else:
+                # Append to existing file
+                engine.save_to_file(chunk, f"temp_chunk_{i}.wav")
+            
+            engine.runAndWait()
+            
+            # If not the first chunk, append to main file
+            if i > 0:
+                try:
+                    main_audio = AudioSegment.from_wav(temp_wav)
+                    chunk_audio = AudioSegment.from_wav(f"temp_chunk_{i}.wav")
+                    combined = main_audio + chunk_audio
+                    combined.export(temp_wav, format="wav")
+                    os.remove(f"temp_chunk_{i}.wav")
+                except Exception as append_error:
+                    logger.error(f"Error appending chunk {i}: {append_error}")
+        
+        # Convert WAV to MP3 with optimized settings
+        if os.path.exists(temp_wav):
+            try:
+                audio = AudioSegment.from_wav(temp_wav)
+                audio.export(
+                    output_path, 
+                    format="mp3",
+                    bitrate="128k",  # Adjust bitrate for better quality/size balance
+                    parameters=["-ac", "1"]  # Mono audio to reduce file size
+                )
+                logger.info(f"English TTS audio saved to {output_path} (length: {len(audio)}ms)")
+                
+                # Clean up temp file
+                os.remove(temp_wav)
+                return True
+            except Exception as convert_error:
+                logger.error(f"Error converting to MP3: {convert_error}")
+                return False
+        else:
+            logger.error("No temporary WAV file was created")
+            return False
     except Exception as e:
         logger.error(f"English TTS failed: {e}")
         logger.error(traceback.format_exc())
@@ -281,6 +384,23 @@ def process_pdf(pdf_path):
         try:
             logger.info("Starting English TTS generation...")
             english_success = generate_english_tts(text, en_path)
+            
+            if english_success:
+                # Verify the file size and duration
+                try:
+                    audio = AudioSegment.from_mp3(en_path)
+                    file_size = os.path.getsize(en_path) / (1024 * 1024)  # Size in MB
+                    duration = len(audio) / 1000  # Duration in seconds
+                    logger.info(f"English audio: {file_size:.2f}MB, {duration:.2f}s")
+                    
+                    # Check if file size seems reasonable for the duration
+                    if file_size > (duration * 0.5):  # Rough estimate: ~0.5MB per second is reasonable
+                        logger.info("English audio file size seems reasonable")
+                    else:
+                        logger.warning(f"English audio file size may be too small for its duration")
+                except Exception as verify_error:
+                    logger.error(f"Error verifying English audio: {verify_error}")
+            
             logger.info(f"English TTS generation {'succeeded' if english_success else 'failed'}")
         except Exception as e:
             logger.error(f"Exception during English TTS generation: {e}")
@@ -302,6 +422,22 @@ def process_pdf(pdf_path):
                 if marathi_audio:
                     with open(mr_path, "wb") as f:
                         f.write(marathi_audio)
+                    
+                    # Verify the file size and duration
+                    try:
+                        audio = AudioSegment.from_mp3(mr_path)
+                        file_size = os.path.getsize(mr_path) / (1024 * 1024)  # Size in MB
+                        duration = len(audio) / 1000  # Duration in seconds
+                        logger.info(f"Marathi audio: {file_size:.2f}MB, {duration:.2f}s")
+                        
+                        # Check if file size seems reasonable for the duration
+                        if file_size > (duration * 0.5):  # Rough estimate: ~0.5MB per second is reasonable
+                            logger.info("Marathi audio file size seems reasonable")
+                        else:
+                            logger.warning(f"Marathi audio file size may be too small for its duration")
+                    except Exception as verify_error:
+                        logger.error(f"Error verifying Marathi audio: {verify_error}")
+                    
                     logger.info(f"Marathi TTS audio saved as {mr_path}")
                     marathi_success = True
                 else:
@@ -328,6 +464,22 @@ def process_pdf(pdf_path):
                 if hindi_audio:
                     with open(hi_path, "wb") as f:
                         f.write(hindi_audio)
+                    
+                    # Verify the file size and duration
+                    try:
+                        audio = AudioSegment.from_mp3(hi_path)
+                        file_size = os.path.getsize(hi_path) / (1024 * 1024)  # Size in MB
+                        duration = len(audio) / 1000  # Duration in seconds
+                        logger.info(f"Hindi audio: {file_size:.2f}MB, {duration:.2f}s")
+                        
+                        # Check if file size seems reasonable for the duration
+                        if file_size > (duration * 0.5):  # Rough estimate: ~0.5MB per second is reasonable
+                            logger.info("Hindi audio file size seems reasonable")
+                        else:
+                            logger.warning(f"Hindi audio file size may be too small for its duration")
+                    except Exception as verify_error:
+                        logger.error(f"Error verifying Hindi audio: {verify_error}")
+                    
                     logger.info(f"Hindi TTS audio saved as {hi_path}")
                     hindi_success = True
                 else:
