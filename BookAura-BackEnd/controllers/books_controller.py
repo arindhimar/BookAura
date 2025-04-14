@@ -7,9 +7,16 @@ from utils.auth_utils import decode_token
 import subprocess
 import json
 import pdfplumber
+import logging
+import threading
+
 
 app = Blueprint('books', __name__)
 books_model = BooksModel()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 UPLOAD_FOLDER = 'uploads/'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -73,7 +80,13 @@ def upload_file(file, title):
             print(f"Translation error: {str(trans_error)}")
             
         try:
-            trigger_audio_conversion(pdf_path, audio_filename)
+            final_script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../services/final.py"))
+            subprocess.Popen(
+                ['python', final_script_path, pdf_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            print(f"Started final.py for audio conversion: {os.path.basename(pdf_path)}")            
         except Exception as audio_error:  
             print(f"Audio conversion error: {str(audio_error)}")
 
@@ -92,6 +105,49 @@ HINDI_TTS_MODEL_ID = "633c02befd966563f61bc2be"  # Hindi TTS
 
 TRANSLATE_CHUNK_SIZE = 200000
 TTS_CHUNK_SIZE = 25000
+
+def process_book_async(pdf_path, book_id, book_title):
+    """Process book translations and audio in background"""
+    try:
+        logger.info(f"Starting background processing for book {book_id}: {book_title}")
+        
+        # Run the final.py script for audio conversion
+        final_script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../services/final.py"))
+        
+        if not os.path.exists(final_script_path):
+            logger.error(f"Audio conversion script not found: {final_script_path}")
+            return
+            
+        logger.info(f"Running audio conversion script: {final_script_path} {pdf_path}")
+        
+        # Run the script and capture output
+        process = subprocess.Popen(
+            ['python', final_script_path, pdf_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        stdout, stderr = process.communicate()
+        
+        # Log the output
+        if stdout:
+            logger.info(f"Audio conversion output: {stdout}")
+        if stderr:
+            logger.error(f"Audio conversion error: {stderr}")
+            
+        # Check if the process was successful
+        if process.returncode == 0:
+            logger.info(f"Audio conversion completed successfully for book {book_id}")
+            # Mark the book as approved
+            books_model.update_approval_status(book_id, True)
+            logger.info(f"Book {book_id} marked as approved")
+        else:
+            logger.error(f"Audio conversion failed for book {book_id} with return code {process.returncode}")
+            
+    except Exception as e:
+        logger.error(f"Error in background processing for book {book_id}: {str(e)}")
+
 
 def trigger_audio_conversion(file_path, audio_filename=None):
     """
@@ -519,7 +575,7 @@ def create_book():
             if any(field not in data for field in required_fields):
                 return jsonify({'error': 'Missing required fields'}), 400
         except Exception as form_error:
-            print(f"Form data error: {str(form_error)}")
+            logger.error(f"Form data error: {str(form_error)}")
             return jsonify({'error': 'Invalid form data'}), 400
 
         # Handle authentication
@@ -532,7 +588,7 @@ def create_book():
             if not decoded_token or 'user_id' not in decoded_token:
                 return jsonify({'error': 'Invalid token'}), 401
         except Exception as auth_error:
-            print(f"Authentication error: {str(auth_error)}")
+            logger.error(f"Authentication error: {str(auth_error)}")
             return jsonify({'error': 'Authentication failed'}), 401
 
         # Process file uploads
@@ -546,7 +602,7 @@ def create_book():
             # Use the dedicated cover upload function to return a string URL
             cover_url = upload_cover_file(cover_file, data['title']) if cover_file else "/default-cover.png"
         except Exception as upload_error:
-            print(f"Upload processing error: {str(upload_error)}")
+            logger.error(f"Upload processing error: {str(upload_error)}")
             return jsonify({'error': 'File processing failed'}), 500
 
         # Process categories
@@ -555,7 +611,7 @@ def create_book():
             if not isinstance(category_ids, list):
                 return jsonify({'error': 'Invalid category format'}), 400
         except json.JSONDecodeError as json_error:
-            print(f"JSON decode error: {str(json_error)}")
+            logger.error(f"JSON decode error: {str(json_error)}")
             return jsonify({'error': 'Invalid category data'}), 400
 
         # Create book record
@@ -572,8 +628,21 @@ def create_book():
                 category_ids=category_ids,
                 cover_url=cover_url
             )
+            
+            # Now that we have the book_id, start background processing
+            if book_id:
+                logger.info(f"Book created successfully with ID: {book_id}, starting processing")
+                
+                # Start processing in a separate thread
+                processing_thread = threading.Thread(
+                    target=process_book_async, 
+                    args=(file_url, book_id, data['title'])
+                )
+                processing_thread.daemon = True
+                processing_thread.start()
+                
         except Exception as db_error:
-            print(f"Database error: {str(db_error)}")
+            logger.error(f"Database error: {str(db_error)}")
             return jsonify({'error': 'Failed to create book record'}), 500
 
         return jsonify({
@@ -585,7 +654,7 @@ def create_book():
         }), 201
 
     except Exception as unexpected_error:
-        print(f"Unexpected error in create_book: {str(unexpected_error)}")
+        logger.error(f"Unexpected error in create_book: {str(unexpected_error)}")
         return jsonify({'error': 'Internal server error'}), 500
     
 
@@ -604,24 +673,94 @@ def update_book(book_id):
     )
     return jsonify({'message': 'Book updated successfully'})
 
+
 @app.route('/<int:book_id>', methods=['DELETE'])
 def delete_book(book_id):
     try:
-        # Get fresh model instance to ensure clean connection
-        books_model = BooksModel()
+        # Verify authentication
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'error': 'Authorization token is required'}), 401
         
-        # Check if book exists first
-        if not books_model.get_book_by_id(book_id):
+        decoded_token = decode_token(token)
+        if not decoded_token or 'user_id' not in decoded_token:
+            return jsonify({'error': 'Invalid token'}), 401
+        # print(decoded_token)
+        user_id = decoded_token['user_id']
+        
+        # Create a fresh instance of the model to ensure clean connection
+        fresh_books_model = BooksModel()
+        
+        # Check if the book exists
+        book = fresh_books_model.get_book_by_id(book_id)
+        if not book:
             return jsonify({'error': 'Book not found'}), 404
-
-        # Perform deletion
-        if books_model.delete_book(book_id):
-            return jsonify({'message': 'Book deleted successfully'}), 200
-        return jsonify({'error': 'Deletion failed'}), 500
-
+        
+        # Check if the user is authorized to delete this book
+        # Allow deletion if the user is the owner or has admin role
+        book_user_id = book.get('user_id')
+        if book_user_id != user_id and decoded_token.get('role_id') != 2:
+            return jsonify({'error': 'Unauthorized to delete this book'}), 403
+        
+        # Delete associated files
+        try:
+            file_url = book.get('fileUrl')
+            if file_url and os.path.exists(file_url):
+                os.remove(file_url)
+                logger.info(f"Deleted file: {file_url}")
+                
+            # Delete translated versions if they exist
+            if file_url:
+                base_name = os.path.splitext(os.path.basename(file_url))[0]
+                if base_name.endswith('_en'):
+                    base_name = base_name[:-3]
+                    
+                for lang in ['mr', 'hi']:
+                    translated_file = os.path.join(UPLOAD_FOLDER, f"{base_name}_{lang}.pdf")
+                    if os.path.exists(translated_file):
+                        os.remove(translated_file)
+                        logger.info(f"Deleted translated file: {translated_file}")
+            
+            # Delete audio files if they exist
+            if file_url:
+                base_name = os.path.splitext(os.path.basename(file_url))[0]
+                if base_name.endswith('_en'):
+                    base_name = base_name[:-3]
+                    
+                for lang in ['en', 'mr', 'hi']:
+                    audio_file = os.path.join(AUDIO_UPLOAD_FOLDER, f"{base_name}_{lang}.mp3")
+                    if os.path.exists(audio_file):
+                        os.remove(audio_file)
+                        logger.info(f"Deleted audio file: {audio_file}")
+                        
+            # Delete cover image if it exists and is not the default
+            cover_url = book.get('coverUrl')
+            if cover_url and cover_url != "/default-cover.png":
+                cover_path = os.path.join(os.getcwd(), cover_url.lstrip('/'))
+                if os.path.exists(cover_path):
+                    os.remove(cover_path)
+                    logger.info(f"Deleted cover image: {cover_path}")
+        except Exception as file_error:
+            logger.error(f"Error deleting files: {str(file_error)}")
+            # Continue with database deletion even if file deletion fails
+        
+        # Delete the book from the database with a fresh connection
+        result = fresh_books_model.delete_book(book_id)
+        
+        # Explicitly close any open connections
+        try:
+            fresh_books_model.close_all_connections()
+        except Exception as close_error:
+            logger.error(f"Error closing connections: {str(close_error)}")
+        
+        if result:
+            return jsonify({'message': f'Book {book_id} deleted successfully'}), 200
+        else:
+            return jsonify({'error': 'Failed to delete book from database'}), 500
+            
     except Exception as e:
-        logger.error(f"Delete book error: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 5004
+        logger.error(f"Error in delete_book endpoint: {str(e)}")
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
     
 
 @app.route('/unread/user', methods=['GET'])
@@ -802,3 +941,17 @@ def get_books_by_publisher():
     } for row in rows]
     
     return jsonify(books)
+
+@app.route('/<int:book_id>/approve', methods=['POST'])
+def approve_book(book_id):
+    try:
+        result = books_model.update_approval_status(book_id, True)
+        if result:
+            logger.info(f"Book {book_id} marked as approved via API")
+            return jsonify({'message': f'Book {book_id} marked as approved'}), 200
+        else:
+            logger.error(f"Failed to mark book {book_id} as approved")
+            return jsonify({'error': 'Failed to mark book as approved'}), 500
+    except Exception as e:
+        logger.error(f"Error in approve_book endpoint: {str(e)}")
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500

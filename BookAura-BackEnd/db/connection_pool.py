@@ -52,3 +52,27 @@ class DatabasePool:
         if conn and conn.is_connected():
             conn.close()
             logger.debug("Database connection closed")
+
+    def close_all_connections(self):
+        """
+        Close all active connections in the pool.
+        This is useful for ensuring a clean state after critical operations.
+        """
+        try:
+            if self._pool:
+                # Get the underlying pool object
+                pool = self._pool._cnx_pool
+                if hasattr(pool, '_queue'):
+                    # Empty the queue and close each connection
+                    while not pool._queue.empty():
+                        try:
+                            cnx = pool._queue.get(block=False)
+                            if cnx and cnx.is_connected():
+                                cnx.close()
+                        except Exception:
+                            pass
+                logger.info("All connections in the pool have been closed")
+            return True
+        except Exception as e:
+            logger.error(f"Error closing all connections in pool: {e}")
+            return False

@@ -1530,4 +1530,103 @@ class BooksModel:
             logger.error(f"Failed to fetch top books: {e}")
             return []
         
+    def update_approval_status(self, book_id, is_approved):
+        """
+        Update the approval status of a book.
         
+        Args:
+            book_id: ID of the book to update
+            is_approved: Boolean indicating whether the book is approved
+            
+        Returns:
+            Boolean indicating success or failure
+        """
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            query = "UPDATE books SET is_approved = %s WHERE book_id = %s"
+            cursor.execute(query, (is_approved, book_id))
+            
+            conn.commit()
+            affected_rows = cursor.rowcount
+            
+            cursor.close()
+            # Use close_connection method instead of db_pool.close_connection
+            self.close_connection()
+            
+            # Use logging module instead of self.logger
+            import logging
+            logging.info(f"Book {book_id} approval status updated to {is_approved}")
+            return affected_rows > 0
+        except Exception as e:
+            logging.error(f"Error updating book approval status: {e}")
+            return False
+        
+    def delete_book(self, book_id):
+        """
+        Delete a book and its associated category relationships.
+        
+        Args:
+            book_id: ID of the book to delete
+            
+        Returns:
+            Boolean indicating success or failure
+        """
+        conn = None
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Start a transaction
+            conn.start_transaction()
+            
+            # First delete from book_category table to maintain referential integrity
+            cursor.execute("DELETE FROM book_category WHERE book_id = %s", (book_id,))
+            
+            # Delete from views table if exists
+            cursor.execute("DELETE FROM views WHERE book_id = %s", (book_id,))
+            
+            # Delete from bookmarks table if exists
+            cursor.execute("DELETE FROM bookmarks WHERE book_id = %s", (book_id,))
+            
+            # Delete from reading_history table if exists
+            cursor.execute("DELETE FROM reading_history WHERE book_id = %s", (book_id,))
+            
+            # Finally delete the book
+            cursor.execute("DELETE FROM books WHERE book_id = %s", (book_id,))
+            
+            # Commit the transaction
+            conn.commit()
+            affected_rows = cursor.rowcount
+            
+            cursor.close()
+            
+            logging.info(f"Book {book_id} deleted successfully")
+            return affected_rows > 0
+        except Exception as e:
+            logging.error(f"Error deleting book: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            # Always close the connection in the finally block
+            if conn:
+                self.close_connection()
+
+
+    def close_all_connections(self):
+        """
+        Close all database connections to ensure clean state.
+        Call this after operations that need immediate reflection.
+        """
+        try:
+            # Get the connection pool from the base model
+            if hasattr(self, 'db_pool') and self.db_pool:
+                # Close any active connections in the pool
+                self.db_pool.close_all_connections()
+                logging.info("All database connections closed")
+            return True
+        except Exception as e:
+            logging.error(f"Error closing all connections: {e}")
+            

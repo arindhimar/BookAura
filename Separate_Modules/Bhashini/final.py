@@ -1,3 +1,4 @@
+import pyttsx3
 import requests
 import argparse
 import re
@@ -111,10 +112,25 @@ def generate_tts_audio(text, model_id):
         time.sleep(0.6)  # Respectful delay
     return audio_data
 
-if __name__ == "__main__":
+def generate_english_tts(text, output_path="output_english.wav"):
+    print("🎤 Generating English TTS using pyttsx3…")
     try:
-        pdf_path = input("Please enter the path of the PDF file: ")
-        text = extract_text_from_pdf(pdf_path)
+        engine = pyttsx3.init()
+        engine.setProperty("rate", 150)  # Adjust speaking speed
+        engine.save_to_file(text, output_path)
+        engine.runAndWait()
+        print(f"✅ English TTS audio saved as {output_path}")
+    except Exception as e:
+        print(f"[❌ ERROR] English TTS failed: {e}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Translate and convert PDF text to speech in Marathi and Hindi.")
+    parser.add_argument("pdf_path", help="Path to the input PDF file")
+    args = parser.parse_args()
+
+    try:
+        text = extract_text_from_pdf(args.pdf_path)
     except Exception as e:
         print(f"❌ Failed to read PDF: {e}")
         exit(1)
@@ -142,5 +158,7 @@ if __name__ == "__main__":
     with open("output_hindi.wav", "wb") as f:
         f.write(hindi_audio)
     print("✅ Hindi TTS audio saved as output_hindi.wav")
+
+    generate_english_tts(text, "output_english.wav")
 
     print("✅ Translation and TTS completed for both languages.")
