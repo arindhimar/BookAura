@@ -104,12 +104,12 @@ def convert_text_to_speech(input_file, output_dir="audio_output", chunk_size=500
 
 if __name__ == "__main__":
     # Configuration
-    TRANSLATED_FILE = "translated_text.txt"
+    TRANSLATED_FILE = "output_marathi.txt"
     OUTPUT_DIR = "audio_output"
 
     # Run conversion
     convert_text_to_speech(
         input_file=TRANSLATED_FILE,
         output_dir=OUTPUT_DIR,
-        chunk_size=5000  # Adjust based on API limits
+        chunk_size=25000  # Adjust based on API limits
     )
