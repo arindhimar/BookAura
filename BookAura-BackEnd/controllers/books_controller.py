@@ -107,46 +107,53 @@ TRANSLATE_CHUNK_SIZE = 200000
 TTS_CHUNK_SIZE = 25000
 
 def process_book_async(pdf_path, book_id, book_title):
-    """Process book translations and audio in background"""
+    """
+    Process book translations and audio in a detached background process.
+    """
     try:
         logger.info(f"Starting background processing for book {book_id}: {book_title}")
-        
-        # Run the final.py script for audio conversion
-        final_script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../services/final.py"))
-        
-        if not os.path.exists(final_script_path):
-            logger.error(f"Audio conversion script not found: {final_script_path}")
-            return
-            
-        logger.info(f"Running audio conversion script: {final_script_path} {pdf_path}")
-        
-        # Run the script and capture output
-        process = subprocess.Popen(
-            ['python', final_script_path, pdf_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
+        # Locate final.py
+        final_script = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../services/final.py")
         )
-        
-        stdout, stderr = process.communicate()
-        
-        # Log the output
-        if stdout:
-            logger.info(f"Audio conversion output: {stdout}")
-        if stderr:
-            logger.error(f"Audio conversion error: {stderr}")
-            
-        # Check if the process was successful
-        if process.returncode == 0:
-            logger.info(f"Audio conversion completed successfully for book {book_id}")
-            # Mark the book as approved
-            books_model.update_approval_status(book_id, True)
-            logger.info(f"Book {book_id} marked as approved")
-        else:
-            logger.error(f"Audio conversion failed for book {book_id} with return code {process.returncode}")
-            
+        if not os.path.exists(final_script):
+            logger.error(f"Audio conversion script not found: {final_script}")
+            return
+
+        cmd = ["python", final_script, pdf_path]
+        logger.info(f"Launching detached process: {' '.join(cmd)}")
+        # fire-and-forget; no communicate()
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
-        logger.error(f"Error in background processing for book {book_id}: {str(e)}")
+        logger.error(f"Error launching audio conversion for book {book_id}: {e}")
+        import traceback; logger.error(traceback.format_exc())
+
+
+def check_and_approve_partial_results(book_id, pdf_path):
+    """Check if any audio files were generated and approve the book if at least one exists"""
+    try:
+        # Determine base name for audio files
+        base_name = os.path.splitext(os.path.basename(pdf_path))[0]
+        if base_name.endswith('_en'):
+            base_name = base_name[:-3]
+            
+        # Check for audio files
+        audio_files_exist = False
+        for lang in ['en', 'mr', 'hi']:
+            audio_path = os.path.join(AUDIO_UPLOAD_FOLDER, f"{base_name}_{lang}.mp3")
+            if os.path.exists(audio_path) and os.path.getsize(audio_path) > 0:
+                logger.info(f"Found valid audio file: {audio_path}")
+                audio_files_exist = True
+                break
+                
+        # If at least one audio file exists, approve the book
+        if audio_files_exist:
+            logger.info(f"Approving book {book_id} based on partial results")
+            books_model.update_approval_status(book_id, True)
+        else:
+            logger.error(f"No valid audio files found for book {book_id}")
+    except Exception as e:
+        logger.error(f"Error checking partial results: {e}")
 
 
 def trigger_audio_conversion(file_path, audio_filename=None):
