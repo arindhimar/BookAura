@@ -15,6 +15,9 @@ import { Card, CardContent } from "../../components/ui/card"
 import { useToast } from "../../hooks/use-toast"
 import { readingHistoryApi, booksApi, categoriesApi, authApi } from "../../services/api"
 import { handleApiError } from "../../utils/errorHandler"
+import { useVoiceCommand } from "../../contexts/VoiceCommandContext"
+import VoiceCommandListener from "../../components/VoiceCommandListener"
+import VoiceCommandHelp from "../../components/VoiceCommandHelp"
 
 export default function Home() {
   const [userName, setUserName] = useState("User")
@@ -30,6 +33,43 @@ export default function Home() {
   const [error, setError] = useState(null)
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { isListening, lastCommand } = useVoiceCommand()
+
+  // Handle voice commands specific to home page
+  useEffect(() => {
+    if (isListening && lastCommand) {
+      const command = lastCommand.toLowerCase()
+
+      if (command.includes("continue reading") && inProgressBook) {
+        navigate(`/book/${inProgressBook.book_id}`)
+        toast({
+          title: "Voice Command",
+          description: "Continuing your book",
+        })
+      } else if (command.includes("show recommendations") || command.includes("show recommended books")) {
+        // Scroll to recommendations section
+        document.getElementById("recommendations-section")?.scrollIntoView({ behavior: "smooth" })
+        toast({
+          title: "Voice Command",
+          description: "Showing recommendations",
+        })
+      } else if (command.includes("explore categories") || command.includes("show categories")) {
+        // Scroll to categories section
+        document.getElementById("categories-section")?.scrollIntoView({ behavior: "smooth" })
+        toast({
+          title: "Voice Command",
+          description: "Showing categories",
+        })
+      } else if (command.includes("recently read") || command.includes("show history")) {
+        // Scroll to recently read section
+        document.getElementById("recently-read-section")?.scrollIntoView({ behavior: "smooth" })
+        toast({
+          title: "Voice Command",
+          description: "Showing recently read books",
+        })
+      }
+    }
+  }, [isListening, lastCommand, inProgressBook, navigate, toast])
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -178,6 +218,7 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
+        <VoiceCommandListener />
       </main>
     )
   }
@@ -190,6 +231,7 @@ export default function Home() {
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
           <p className="text-muted-foreground">Loading your personalized experience...</p>
         </div>
+        <VoiceCommandListener />
       </main>
     )
   }
@@ -260,7 +302,7 @@ export default function Home() {
 
               <Card
                 className="hover:shadow-md transition-shadow duration-300 cursor-pointer"
-                onClick={() => navigate("/library")}
+                onClick={() => navigate("/my-library")}
               >
                 <CardContent className="p-6 flex items-center">
                   <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mr-4">
@@ -278,17 +320,24 @@ export default function Home() {
             <ExploreBooks categories={categories} loading={loadingCategories} />
 
             {/* Recently Read Section */}
-            <RecentlyRead books={recentBooks} loading={loadingRecent} />
+            <div id="recently-read-section">
+              <RecentlyRead books={recentBooks} loading={loadingRecent} />
+            </div>
 
             {/* Recommendations Section */}
-            <Recommendations books={recommendedBooks} loading={loadingRecommendations} />
+            <div id="recommendations-section">
+              <Recommendations books={recommendedBooks} loading={loadingRecommendations} />
+            </div>
 
             {/* Categories Section */}
-            <CategorySection categories={categories} loading={loadingCategories} />
+            <div id="categories-section">
+              <CategorySection categories={categories} loading={loadingCategories} />
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>
+      <VoiceCommandListener />
+      <VoiceCommandHelp />
     </main>
   )
 }
-

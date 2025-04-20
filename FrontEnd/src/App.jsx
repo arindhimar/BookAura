@@ -1,7 +1,10 @@
+"use client"
+
 import { useEffect } from "react"
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom"
 import { ThemeProvider } from "./contexts/ThemeContext"
 import { UserProvider, useUser } from "./contexts/UserContext"
+import { VoiceCommandProvider } from "./contexts/VoiceCommandContext"
 import LandingPage from "./pages/LandingPage"
 import DashboardLayout from "./components/layout/DashboardLayout"
 import Dashboard from "./pages/platform_administrator/Dashboard"
@@ -124,9 +127,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-
-
-
 
       {/* Admin Routes */}
       <Route
@@ -281,7 +281,9 @@ function AppRoutes() {
         path="/settings"
         element={
           <ProtectedRoute allowedRoles={[1, 2, 3, 4, 5]}>
-            <DashboardLayout userRole={user?.role_id === 1 ? "admin" : user?.role_id === 2 ? "publisher" : "author" || "moderator"}>
+            <DashboardLayout
+              userRole={user?.role_id === 1 ? "admin" : user?.role_id === 2 ? "publisher" : "author" || "moderator"}
+            >
               <Settings />
             </DashboardLayout>
           </ProtectedRoute>
@@ -296,7 +298,9 @@ function App() {
     <ThemeProvider>
       <UserProvider>
         <Router>
-          <AppRoutes />
+          <VoiceCommandProvider>
+            <AppRoutes />
+          </VoiceCommandProvider>
         </Router>
       </UserProvider>
     </ThemeProvider>
@@ -304,4 +308,3 @@ function App() {
 }
 
 export default App
-

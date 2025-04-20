@@ -23,6 +23,9 @@ import {
 } from "../../components/ui/dropdown-menu"
 import { readingHistoryApi, bookmarksApi } from "../../services/api"
 import { handleApiError } from "../../utils/errorHandler"
+import { useVoiceCommand } from "../../contexts/VoiceCommandContext"
+import VoiceCommandListener from "../../components/VoiceCommandListener"
+import VoiceCommandHelp from "../../components/VoiceCommandHelp"
 
 const tabs = [
   { id: "history", label: "Reading History", icon: Clock },
@@ -48,6 +51,90 @@ export default function Library() {
   const [error, setError] = useState(null)
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { isListening, lastCommand } = useVoiceCommand()
+
+  // Handle voice commands specific to library page
+  useEffect(() => {
+    if (isListening && lastCommand) {
+      const command = lastCommand.toLowerCase()
+
+      if (command.includes("show history") || command.includes("reading history")) {
+        setActiveTab("history")
+        toast({
+          title: "Voice Command",
+          description: "Showing reading history",
+        })
+      } else if (command.includes("show bookmarks") || command.includes("view bookmarks")) {
+        setActiveTab("bookmarks")
+        toast({
+          title: "Voice Command",
+          description: "Showing bookmarks",
+        })
+      } else if (command.includes("search for")) {
+        const searchTerm = command.replace("search for", "").trim()
+        if (searchTerm) {
+          setSearchQuery(searchTerm)
+          toast({
+            title: "Voice Command",
+            description: `Searching for "${searchTerm}"`,
+          })
+        }
+      } else if (command.includes("clear search")) {
+        setSearchQuery("")
+        toast({
+          title: "Voice Command",
+          description: "Search cleared",
+        })
+      } else if (command.includes("grid view")) {
+        setViewMode("grid")
+        toast({
+          title: "Voice Command",
+          description: "Switched to grid view",
+        })
+      } else if (command.includes("list view") || command.includes("scroll view")) {
+        setViewMode("scroll")
+        toast({
+          title: "Voice Command",
+          description: "Switched to list view",
+        })
+      } else if (command.includes("sort by")) {
+        if (command.includes("recent")) {
+          setSortBy("recent")
+          toast({
+            title: "Voice Command",
+            description: "Sorting by most recent",
+          })
+        } else if (command.includes("title")) {
+          if (command.includes("descending") || command.includes("z to a")) {
+            setSortBy("title-desc")
+            toast({
+              title: "Voice Command",
+              description: "Sorting by title Z-A",
+            })
+          } else {
+            setSortBy("title-asc")
+            toast({
+              title: "Voice Command",
+              description: "Sorting by title A-Z",
+            })
+          }
+        } else if (command.includes("author")) {
+          setSortBy("author")
+          toast({
+            title: "Voice Command",
+            description: "Sorting by author",
+          })
+        }
+      } else if (command.includes("open book") && filteredBooks.length > 0) {
+        // Open the first book in the filtered list
+        navigate(`/book/${filteredBooks[0].book_id}`)
+        toast({
+          title: "Voice Command",
+          description: "Opening first book in results",
+        })
+      }
+    }
+  }, [isListening, lastCommand, filteredBooks, navigate, toast])
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -215,6 +302,7 @@ export default function Library() {
             </CardContent>
           </Card>
         </main>
+        <VoiceCommandListener />
       </div>
     )
   }
@@ -382,6 +470,8 @@ export default function Library() {
           </AnimatePresence>
         </Tabs>
       </main>
+      <VoiceCommandListener />
+      <VoiceCommandHelp />
     </div>
   )
 }

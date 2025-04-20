@@ -311,7 +311,7 @@ export default function ManageBooks() {
                 <TableHead>Title</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Categories</TableHead>
-                <TableHead>Status</TableHead>
+                {/* <TableHead>Status</TableHead> */}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -324,11 +324,11 @@ export default function ManageBooks() {
                       {book.description ? book.description.substring(0, 50) + "..." : "No description"}
                     </TableCell>
                     <TableCell>{book.categories || "Uncategorized"}</TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                       <Badge variant={book.is_approved ? "success" : "warning"}>
                         {book.is_approved ? "Approved" : "Pending"}
                       </Badge>
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

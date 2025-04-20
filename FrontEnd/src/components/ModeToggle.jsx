@@ -13,11 +13,7 @@ export function ModeToggle() {
     { name: "light", icon: Sun, color: "bg-orange-400" },
     { name: "dark", icon: Moon, color: "bg-blue-900" },
     { name: "system", icon: Laptop, color: "bg-gray-400" },
-    { name: "rose", icon: Palette, color: "bg-rose-400" },
-    { name: "green", icon: Palette, color: "bg-green-400" },
-    { name: "blue", icon: Palette, color: "bg-blue-400" },
   ]
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -31,18 +27,16 @@ export function ModeToggle() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="glass">
         {themes.map(({ name, icon: Icon, color }) => (
-          <DropdownMenuItem key={name} onClick={() => setTheme(name)} className="group cursor-pointer">
+          <DropdownMenuItem
+            key={name}
+            onClick={() => setTheme(name)}
+            className="group cursor-pointer relative flex items-center"
+          >
             <div className={`mr-2 h-4 w-4 rounded-full ${color}`} />
-            <span className="capitalize group-hover:text-primary-foreground">{name}</span>
-            <motion.div
-              className="absolute inset-0 bg-primary opacity-0 rounded-sm"
-              whileHover={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
-            />
+            <span className="capitalize">{name}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
-

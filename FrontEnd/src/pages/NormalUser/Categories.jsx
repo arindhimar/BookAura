@@ -16,6 +16,9 @@ import { useToast } from "../../hooks/use-toast"
 import { categoriesApi } from "../../services/api"
 import { handleApiError } from "../../utils/errorHandler"
 import BookCard from "../../components/BookCard"
+import { useVoiceCommand } from "../../contexts/VoiceCommandContext"
+import VoiceCommandListener from "../../components/VoiceCommandListener"
+import VoiceCommandHelp from "../../components/VoiceCommandHelp"
 
 export default function Categories() {
   const [categories, setCategories] = useState({})
@@ -27,6 +30,70 @@ export default function Categories() {
   const [error, setError] = useState(null)
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { isListening, lastCommand } = useVoiceCommand()
+
+  // Handle voice commands specific to categories page
+  useEffect(() => {
+    if (isListening && lastCommand) {
+      const command = lastCommand.toLowerCase()
+
+      if (command.includes("search for")) {
+        const searchTerm = command.replace("search for", "").trim()
+        if (searchTerm) {
+          setSearchQuery(searchTerm)
+          toast({
+            title: "Voice Command",
+            description: `Searching for "${searchTerm}"`,
+          })
+        }
+      } else if (command.includes("clear search")) {
+        setSearchQuery("")
+        toast({
+          title: "Voice Command",
+          description: "Search cleared",
+        })
+      } else if (command.includes("show category") || command.includes("open category")) {
+        // Try to find a category that matches the command
+        const categoryName = command.replace("show category", "").replace("open category", "").trim()
+
+        if (
+          categoryName &&
+          Object.keys(categories).some((cat) => cat.toLowerCase().includes(categoryName.toLowerCase()))
+        ) {
+          const matchedCategory = Object.keys(categories).find((cat) =>
+            cat.toLowerCase().includes(categoryName.toLowerCase()),
+          )
+
+          setActiveCategory(matchedCategory)
+          toast({
+            title: "Voice Command",
+            description: `Opening ${matchedCategory} category`,
+          })
+        } else if (featuredCategory) {
+          // If no specific category found, open the featured category
+          setActiveCategory(featuredCategory.name)
+          toast({
+            title: "Voice Command",
+            description: `Opening featured category: ${featuredCategory.name}`,
+          })
+        }
+      } else if (command.includes("close category")) {
+        setActiveCategory(null)
+        toast({
+          title: "Voice Command",
+          description: "Closing category view",
+        })
+      } else if (command.includes("featured category")) {
+        if (featuredCategory) {
+          setActiveCategory(featuredCategory.name)
+          toast({
+            title: "Voice Command",
+            description: `Opening featured category: ${featuredCategory.name}`,
+          })
+        }
+      }
+    }
+  }, [isListening, lastCommand, categories, featuredCategory, toast])
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -130,6 +197,7 @@ export default function Categories() {
               ))}
           </div>
         </div>
+        <VoiceCommandListener />
       </div>
     )
   }
@@ -151,6 +219,7 @@ export default function Categories() {
             </CardContent>
           </Card>
         </div>
+        <VoiceCommandListener />
       </div>
     )
   }
@@ -169,6 +238,7 @@ export default function Categories() {
             <Button onClick={() => navigate("/browse")}>Browse All Books</Button>
           </div>
         </div>
+        <VoiceCommandListener />
       </div>
     )
   }
@@ -467,7 +537,8 @@ export default function Categories() {
           )}
         </AnimatePresence>
       </div>
+      <VoiceCommandListener />
+      <VoiceCommandHelp />
     </div>
   )
 }
-

@@ -25,11 +25,11 @@ const adminItems = [
     href: "/admin/agreements",
     icon: FileText,
   },
-  {
-    title: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
+  // {
+  //   title: "Settings",
+  //   href: "/settings",
+  //   icon: Settings,
+  // },
 ]
 
 const moderatorItems = [
@@ -43,11 +43,11 @@ const moderatorItems = [
     href: "/moderator/pending-reviews",
     icon: FileText,
   },
-  {
-    title: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
+  // {
+  //   title: "Settings",
+  //   href: "/settings",
+  //   icon: Settings,
+  // },
 ]
 
 const publisherItems = [
@@ -66,11 +66,11 @@ const publisherItems = [
     href: "/publisher/analytics",
     icon: DollarSign,
   },
-  {
-    title: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
+  // {
+  //   title: "Settings",
+  //   href: "/settings",
+  //   icon: Settings,
+  // },
 ]
 
 const authorItems = [
@@ -89,11 +89,11 @@ const authorItems = [
     href: "/author/reviews",
     icon: Star,
   },
-  {
-    title: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
+  // {
+  //   title: "Settings",
+  //   href: "/settings",
+  //   icon: Settings,
+  // },
 ]
 
 export function SidebarNav({ isOpen, onClose, userRole }) {

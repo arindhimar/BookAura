@@ -18,10 +18,14 @@ import { Card, CardContent } from "../../components/ui/card"
 import { useToast } from "../../hooks/use-toast"
 import BookCard from "../../components/BookCard"
 import UserNavbar from "../../components/UserNavbar"
+import { useVoiceCommand } from "../../contexts/VoiceCommandContext"
+import VoiceCommandListener from "../../components/VoiceCommandListener"
+import VoiceCommandHelp from "../../components/VoiceCommandHelp"
 
 export default function BrowsePage() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { isListening, lastCommand } = useVoiceCommand()
 
   const [searchQuery, setSearchQuery] = useState("")
   const [activeFilters, setActiveFilters] = useState([])
@@ -34,6 +38,64 @@ export default function BrowsePage() {
   const [categories, setCategories] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+
+  // Handle voice commands specific to browse page
+  useEffect(() => {
+    if (isListening && lastCommand) {
+      const command = lastCommand.toLowerCase()
+
+      if (command.includes("search for")) {
+        const searchTerm = command.replace("search for", "").trim()
+        if (searchTerm) {
+          setSearchQuery(searchTerm)
+          toast({
+            title: "Voice Command",
+            description: `Searching for "${searchTerm}"`,
+          })
+        }
+      } else if (command.includes("filter by")) {
+        setIsFilterOpen(true)
+        toast({
+          title: "Voice Command",
+          description: "Opening filters",
+        })
+      } else if (command.includes("sort by")) {
+        if (command.includes("newest")) {
+          setSortBy("newest")
+          toast({
+            title: "Voice Command",
+            description: "Sorting by newest first",
+          })
+        } else if (command.includes("title")) {
+          setSortBy("title-asc")
+          toast({
+            title: "Voice Command",
+            description: "Sorting by title",
+          })
+        } else if (command.includes("popular") || command.includes("views")) {
+          setSortBy("views-desc")
+          toast({
+            title: "Voice Command",
+            description: "Sorting by most viewed",
+          })
+        }
+      } else if (command.includes("clear filters") || command.includes("reset filters")) {
+        resetFilters()
+        toast({
+          title: "Voice Command",
+          description: "Filters cleared",
+        })
+      } else if (command.includes("open book") && filteredBooks.length > 0) {
+        // Open the first book in the filtered list
+        navigate(`/book/${filteredBooks[0].book_id}`)
+        toast({
+          title: "Voice Command",
+          description: "Opening first book in results",
+        })
+      }
+    }
+  }, [isListening, lastCommand, filteredBooks, navigate, toast])
 
   // Fetch books and categories from backend
   useEffect(() => {
@@ -215,6 +277,7 @@ export default function BrowsePage() {
             <p className="text-muted-foreground">Loading books...</p>
           </div>
         </div>
+        <VoiceCommandListener />
       </div>
     )
   }
@@ -236,6 +299,7 @@ export default function BrowsePage() {
             </CardContent>
           </Card>
         </div>
+        <VoiceCommandListener />
       </div>
     )
   }
@@ -291,7 +355,7 @@ export default function BrowsePage() {
               </SelectContent>
             </Select>
 
-            <Sheet>
+            <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
                   <SlidersHorizontal className="h-4 w-4" />
@@ -548,7 +612,8 @@ export default function BrowsePage() {
           </TabsContent>
         </Tabs>
       </div>
+      <VoiceCommandListener />
+      <VoiceCommandHelp />
     </div>
   )
 }
-

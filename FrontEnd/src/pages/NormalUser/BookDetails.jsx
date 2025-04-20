@@ -9,6 +9,9 @@ import RelatedBooks from "../../components/RelatedBooks"
 import { useEffect, useState } from "react"
 import UserNavbar from "../../components/UserNavbar"
 import { Card, CardContent } from "../../components/ui/card"
+import { useVoiceCommand } from "../../contexts/VoiceCommandContext"
+import VoiceCommandListener from "../../components/VoiceCommandListener"
+import VoiceCommandHelp from "../../components/VoiceCommandHelp"
 
 export default function BookDetails() {
   const { id } = useParams()
@@ -18,6 +21,7 @@ export default function BookDetails() {
   const [relatedByCategory, setRelatedByCategory] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const { isListening, lastCommand } = useVoiceCommand()
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -68,6 +72,8 @@ export default function BookDetails() {
             <p className="text-muted-foreground">Loading book details...</p>
           </div>
         </div>
+        <VoiceCommandListener />
+        <VoiceCommandHelp />
       </main>
     )
   }
@@ -103,6 +109,8 @@ export default function BookDetails() {
             </CardContent>
           </Card>
         </div>
+        <VoiceCommandListener />
+        <VoiceCommandHelp />
       </main>
     )
   }
@@ -133,7 +141,8 @@ export default function BookDetails() {
         {/* Related Books */}
         <RelatedBooks relatedByAuthor={relatedByAuthor} relatedByCategory={relatedByCategory} />
       </motion.div>
+      <VoiceCommandListener />
+      <VoiceCommandHelp />
     </main>
   )
 }
-

@@ -7,17 +7,18 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
 import { ModeToggle } from "./ModeToggle"
-import { Search, Bell, BookOpen, User, Menu, LogOut, Settings, Library, Home, Compass } from "lucide-react"
+import { Search, Bell, BookOpen, Menu, LogOut, Library, Home, Compass, Mic, MicOff } from "lucide-react"
 import { Input } from "./ui/input"
 import { useState, useEffect, useRef } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "./ui/badge"
+import { useVoiceCommand } from "../contexts/VoiceCommandContext"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 
 export default function UserNavbar() {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
@@ -25,8 +26,10 @@ export default function UserNavbar() {
   const [searchQuery, setSearchQuery] = useState("")
   const [notifications, setNotifications] = useState(3) // Example notification count
   const searchRef = useRef(null)
+  const searchInputRef = useRef(null)
   const navigate = useNavigate()
   const location = useLocation()
+  const { isListening, toggleListening, supportsSpeechRecognition } = useVoiceCommand()
 
   const fetchSearchResults = async (query) => {
     if (!query.trim()) {
@@ -65,7 +68,25 @@ export default function UserNavbar() {
     }
 
     document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
+
+    // Listen for voice search commands
+    const handleVoiceSearch = (event) => {
+      const { searchTerm } = event.detail
+      setSearchQuery(searchTerm)
+      if (searchInputRef.current) {
+        searchInputRef.current.focus()
+        setIsSearchFocused(true)
+      }
+      // Immediately trigger search
+      fetchSearchResults(searchTerm)
+    }
+
+    window.addEventListener("voiceSearch", handleVoiceSearch)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      window.removeEventListener("voiceSearch", handleVoiceSearch)
+    }
   }, [])
 
   const handleSearchChange = (e) => {
@@ -121,6 +142,7 @@ export default function UserNavbar() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
+                  ref={searchInputRef}
                   type="text"
                   placeholder="Search books..."
                   className="pl-10 pr-4 py-2 w-64 rounded-full border-primary/20 focus:border-primary transition-all duration-300 focus:w-80"
@@ -155,6 +177,8 @@ export default function UserNavbar() {
                           src={
                             "http://127.0.0.1:5000/books/" + book.cover_url ||
                             "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg" ||
+                            "/placeholder.svg" ||
+                            "/placeholder.svg" ||
                             "/placeholder.svg"
                           }
                           alt={book.title}
@@ -174,6 +198,27 @@ export default function UserNavbar() {
             </div>
 
             <ModeToggle />
+
+            {/* Voice Command Button */}
+            {supportsSpeechRecognition && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={isListening ? "default" : "ghost"}
+                      size="icon"
+                      onClick={toggleListening}
+                      className={isListening ? "bg-primary text-primary-foreground" : ""}
+                    >
+                      {isListening ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isListening ? "Stop voice commands" : "Start voice commands"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
 
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
@@ -197,19 +242,6 @@ export default function UserNavbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="flex flex-col">
-                  <span>My Account</span>
-                  <span className="text-xs font-normal text-muted-foreground">johndoe@example.com</span>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/settings")}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logOut} className="cursor-pointer text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -254,6 +286,8 @@ export default function UserNavbar() {
                               src={
                                 "http://127.0.0.1:5000/books/" + book.cover_url ||
                                 "https://marketplace.canva.com/EAFjYY88pEE/1/0/1003w/canva-white%2C-green-and-yellow-minimalist-business-book-cover-cjr8n1BH2lY.jpg" ||
+                                "/placeholder.svg" ||
+                                "/placeholder.svg" ||
                                 "/placeholder.svg"
                               }
                               alt={book.title}
@@ -286,6 +320,19 @@ export default function UserNavbar() {
                     ))}
                   </div>
 
+                  {supportsSpeechRecognition && (
+                    <div className="mt-4">
+                      <Button
+                        variant={isListening ? "default" : "outline"}
+                        className="w-full justify-start"
+                        onClick={toggleListening}
+                      >
+                        {isListening ? <Mic className="mr-2 h-4 w-4" /> : <MicOff className="mr-2 h-4 w-4" />}
+                        <span>{isListening ? "Stop voice commands" : "Start voice commands"}</span>
+                      </Button>
+                    </div>
+                  )}
+
                   <div className="mt-auto">
                     <Button variant="outline" className="w-full justify-start" onClick={logOut}>
                       <LogOut className="mr-2 h-4 w-4" />
@@ -301,4 +348,3 @@ export default function UserNavbar() {
     </nav>
   )
 }
-

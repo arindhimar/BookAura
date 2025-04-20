@@ -26,6 +26,8 @@ import { Slider } from "./ui/slider"
 import { Card, CardContent } from "./ui/card"
 import { Separator } from "./ui/separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
+import { useVoiceCommand } from "../contexts/VoiceCommandContext"
+import { useToast } from "../hooks/use-toast"
 
 export default function BookDetailsComponent({ book }) {
   const [isBookmarked, setIsBookmarked] = useState(false)
@@ -42,6 +44,8 @@ export default function BookDetailsComponent({ book }) {
   const [isAudioLoaded, setIsAudioLoaded] = useState(false)
   const [error, setError] = useState(null)
   const audioRef = useRef(null)
+  const { isListening, lastCommand } = useVoiceCommand()
+  const { toast } = useToast()
 
   useEffect(() => {
     const fetchBookmarkStatus = async () => {
@@ -71,6 +75,41 @@ export default function BookDetailsComponent({ book }) {
 
     if (book) fetchBookmarkStatus()
   }, [book])
+
+  // Handle voice commands specific to book details
+  useEffect(() => {
+    if (isListening && lastCommand && book) {
+      const command = lastCommand.toLowerCase()
+
+      if (command.includes("read this book") || command.includes("read book")) {
+        handleReadNow()
+        toast({
+          title: "Voice Command",
+          description: "Opening book for reading",
+        })
+      } else if (command.includes("bookmark") || command.includes("save book")) {
+        handleBookmarks()
+        toast({
+          title: "Voice Command",
+          description: isBookmarked ? "Removing bookmark" : "Adding bookmark",
+        })
+      } else if (command.includes("listen") || command.includes("play audio")) {
+        if (book.audioUrl || book.audio_url) {
+          handleListenNow()
+          toast({
+            title: "Voice Command",
+            description: "Playing audio book",
+          })
+        } else {
+          toast({
+            title: "Voice Command Error",
+            description: "Audio not available for this book",
+            variant: "destructive",
+          })
+        }
+      }
+    }
+  }, [isListening, lastCommand, book])
 
   const handleBookmarks = async () => {
     if (isLoadingBookmark) return
@@ -594,4 +633,3 @@ export default function BookDetailsComponent({ book }) {
     </div>
   )
 }
-
